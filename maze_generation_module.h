@@ -4,27 +4,29 @@
 #include <vector>
 #include <string> // Included for completeness, though not strictly used in this header's interface
 
-// Forward declaration if Cell is more complex and defined elsewhere,
-// or define it here if it's simple enough and primarily for generation.
-// For this example, let's define a Cell structure suitable for generation.
 namespace MazeGeneration {
 
+// Enum to specify the maze generation algorithm
+enum class MazeAlgorithmType {
+    DFS,    // Recursive Backtracker (Randomized DFS)
+    PRIMS,  // Randomized Prim's Algorithm
+    KRUSKAL // Randomized Kruskal's Algorithm
+};
+
 struct GenCell {
-    bool visited_gen = false;
+    bool visited_gen = false; // Primarily for DFS/Prims, less so for Kruskal's direct generation logic
     // Walls: Top, Right, Bottom, Left
     bool walls[4] = {true, true, true, true};
-    // Note: No parent here, as that's solver-specific.
-    // If the main program's Cell needs to be used, this might need adjustment
-    // or the main program's Cell definition would be used directly.
 };
 
 // Function to generate the maze data
 // It will populate the provided 'maze_grid'
-// MAZE_WIDTH and MAZE_HEIGHT are passed to know the grid dimensions.
+// grid_width and grid_height are passed to know the grid dimensions.
 // The 'maze_grid' in the main program should be passed by reference.
-void generate_maze_structure(std::vector<std::vector<GenCell>>& maze_grid_to_populate, 
-                             int start_r, int start_c, 
-                             int grid_width, int grid_height);
+void generate_maze_structure(std::vector<std::vector<GenCell>>& maze_grid_to_populate,
+                             int start_r, int start_c, // start_r, start_c are less relevant for Kruskal's
+                             int grid_width, int grid_height,
+                             MazeAlgorithmType algorithm_type);
 
 } // namespace MazeGeneration
 
