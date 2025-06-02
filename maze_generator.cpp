@@ -4,11 +4,15 @@
 #include <queue>
 #include <stack>
 #include <algorithm>
-#include <random>
+#include <random> // For solvers if they use it directly
 #include <iomanip>    // For std::setw and std::setfill
 #include <filesystem> // For creating directories (C++17)
 #include <fstream>    // For INI file reading
 #include <sstream>    // For parsing string to int
+// #include <cstdio> // No longer needed for popen
+
+// Include your new maze generation module
+#include "maze_generation_module.h" // <<< NEW INCLUDE
 
 // Define STB_IMAGE_WRITE_IMPLEMENTATION in exactly one C or C++ file
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -20,40 +24,34 @@ namespace fs = std::filesystem;
 int MAZE_WIDTH = 10;    // Default
 int MAZE_HEIGHT = 10;   // Default
 int UNIT_PIXELS = 15;   // Default
-std::pair<int, int> START_NODE = {0, 0}; // Default, can be overridden after loading config
-std::pair<int, int> END_NODE = {MAZE_HEIGHT - 1, MAZE_WIDTH - 1}; // Default, will be updated after loading config
+std::pair<int, int> START_NODE = {0, 0};
+std::pair<int, int> END_NODE = {MAZE_HEIGHT - 1, MAZE_WIDTH - 1};
 
-// --- Color Definitions (R, G, B) - mutable to be loaded from config ---
-unsigned char COLOR_BACKGROUND[3] = {255, 255, 255}; // White (paths)
-unsigned char COLOR_WALL[3] = {0, 0, 0};           // Black
-unsigned char COLOR_START[3] = {0, 255, 0};        // Green
-unsigned char COLOR_END[3] = {255, 0, 0};          // Red
-unsigned char COLOR_FRONTIER[3] = {173, 216, 230}; // Light Blue (BFS queue, DFS stack)
-unsigned char COLOR_VISITED[3] = {211, 211, 211};   // Light Gray
-unsigned char COLOR_CURRENT[3] = {255, 165, 0};    // Orange
-unsigned char COLOR_SOLUTION_PATH[3] = {0, 0, 255}; // Blue
+// --- Color Definitions (R, G, B) ---
+unsigned char COLOR_BACKGROUND[3] = {255, 255, 255};
+unsigned char COLOR_WALL[3] = {0, 0, 0};
+unsigned char COLOR_START[3] = {0, 255, 0};
+unsigned char COLOR_END[3] = {255, 0, 0};
+unsigned char COLOR_FRONTIER[3] = {173, 216, 230};
+unsigned char COLOR_VISITED[3] = {211, 211, 211};
+unsigned char COLOR_CURRENT[3] = {255, 165, 0};
+unsigned char COLOR_SOLUTION_PATH[3] = {0, 0, 255};
 
-// --- Maze Cell Structure ---
+// --- Maze Cell Structure for the main program (solver-focused) ---
 struct Cell {
-    bool visited_gen = false; // For maze generation
-    // Walls: Top, Right, Bottom, Left
-    bool walls[4] = {true, true, true, true};
-    std::pair<int, int> parent = {-1, -1}; // For path reconstruction in solvers
+    // bool visited_gen = false; // This is now inside MazeGeneration::GenCell
+    bool walls[4] = {true, true, true, true}; // Top, Right, Bottom, Left
+    std::pair<int, int> parent = {-1, -1};    // For path reconstruction in solvers
 };
 
-std::vector<std::vector<Cell>> maze;
+std::vector<std::vector<Cell>> maze; // This is the main maze for solvers
 
-// --- Solver Visual State Enum ---
+// --- Solver Visual State Enum --- (remains the same)
 enum class SolverCellState {
-    NONE,
-    START,
-    END,
-    FRONTIER,
-    CURRENT_PROC, // Cell currently being processed
-    VISITED_PROC, // Cell already processed/explored
-    SOLUTION
+    NONE, START, END, FRONTIER, CURRENT_PROC, VISITED_PROC, SOLUTION
 };
 
+// ... (trim, parse_hex_color_string, load_config functions remain the same) ...
 // --- Utility function to trim whitespace ---
 std::string trim(const std::string& str) {
     const std::string whitespace = " \t\n\r\f\v";
@@ -101,8 +99,6 @@ bool parse_hex_color_string(std::string hex_str, unsigned char& r, unsigned char
         return false;
     }
 }
-
-
 // --- Function to load configuration from INI file ---
 void load_config(const std::string& filename) {
     std::ifstream ini_file(filename);
@@ -141,7 +137,6 @@ void load_config(const std::string& filename) {
             if (delimiter_pos != std::string::npos) {
                 std::string key = trim(line.substr(0, delimiter_pos));
                 std::string value_str = trim(line.substr(delimiter_pos + 1));
-                // Remove comments from maze config values as well, if any (though not typical for these values)
                 size_t comment_pos = value_str.find(';');
                 if (comment_pos != std::string::npos) {
                     value_str = trim(value_str.substr(0, comment_pos));
@@ -165,12 +160,10 @@ void load_config(const std::string& filename) {
                 std::string key = trim(line.substr(0, delimiter_pos));
                 std::string value_str = trim(line.substr(delimiter_pos + 1));
 
-                // MODIFICATION: Remove comment from color string before parsing
                 size_t comment_pos = value_str.find(';');
                 if (comment_pos != std::string::npos) {
                     value_str = trim(value_str.substr(0, comment_pos));
                 }
-                // END MODIFICATION
 
                 unsigned char r, g, b;
                 if (parse_hex_color_string(value_str, r, g, b)) {
@@ -216,42 +209,19 @@ void load_config(const std::string& filename) {
              std::cerr << "Warning: START_NODE and END_NODE are identical. This might lead to unexpected behavior." << std::endl;
         }
     }
-
-    std::cout << "Configuration successfully " << std::endl;
+    std::cout << "Configuration successfully loaded." << std::endl;
 }
-
 
 // --- Maze Generation (Randomized DFS / Recursive Backtracker) ---
-void generate_maze(int r, int c) {
-    maze[r][c].visited_gen = true;
-    std::vector<std::pair<int, int>> directions = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}}; // R, D, L, U
-    std::random_device rd;
-    std::mt19937 g(rd());
-    std::shuffle(directions.begin(), directions.end(), g);
+// REMOVED - Now in maze_generation_module.cpp
+// void generate_maze(int r, int c) { ... }
 
-    for (const auto& dir : directions) {
-        int nr = r + dir.first;
-        int nc = c + dir.second;
+// --- Function to call external maze generator and parse its output ---
+// REMOVED - No longer calling external program
+// bool load_maze_from_external_generator(...) { ... }
 
-        if (nr >= 0 && nr < MAZE_HEIGHT && nc >= 0 && nc < MAZE_WIDTH && !maze[nr][nc].visited_gen) {
-            if (dir.first == 0 && dir.second == 1) { // Right
-                maze[r][c].walls[1] = false;
-                maze[nr][nc].walls[3] = false;
-            } else if (dir.first == 1 && dir.second == 0) { // Down
-                maze[r][c].walls[2] = false;
-                maze[nr][nc].walls[0] = false;
-            } else if (dir.first == 0 && dir.second == -1) { // Left
-                maze[r][c].walls[3] = false;
-                maze[nr][nc].walls[1] = false;
-            } else if (dir.first == -1 && dir.second == 0) { // Up
-                maze[r][c].walls[0] = false;
-                maze[nr][nc].walls[2] = false;
-            }
-            generate_maze(nr, nc);
-        }
-    }
-}
 
+// ... (save_image, is_straight_line, solve_bfs, solve_dfs functions remain the same) ...
 // --- Image Saving Function ---
 void save_image(const std::string& folder, int step_count,
                 const std::vector<std::vector<SolverCellState>>& visual_states,
@@ -271,12 +241,12 @@ void save_image(const std::string& folder, int step_count,
 
     for (int r_unit = 0; r_unit < img_height_units; ++r_unit) {
         for (int c_unit = 0; c_unit < img_width_units; ++c_unit) {
-            const unsigned char* current_color_ptr = COLOR_WALL; // Default to wall
+            const unsigned char* current_color_ptr = COLOR_WALL; 
 
-            if (r_unit % 2 != 0 && c_unit % 2 != 0) { // Cell interior
+            if (r_unit % 2 != 0 && c_unit % 2 != 0) { 
                 int maze_r = (r_unit - 1) / 2;
                 int maze_c = (c_unit - 1) / 2;
-                current_color_ptr = COLOR_BACKGROUND; // Path part
+                current_color_ptr = COLOR_BACKGROUND; 
 
                 SolverCellState state = visual_states[maze_r][maze_c];
                 if (state == SolverCellState::START) current_color_ptr = COLOR_START;
@@ -292,23 +262,23 @@ void save_image(const std::string& folder, int step_count,
                 }
 
 
-            } else if (r_unit % 2 != 0 && c_unit % 2 == 0) { // Vertical wall potential
+            } else if (r_unit % 2 != 0 && c_unit % 2 == 0) { 
                 int maze_r = (r_unit - 1) / 2;
                 int maze_c_left = (c_unit / 2) - 1;
-                if (c_unit > 0 && c_unit < 2 * MAZE_WIDTH) { // Check bounds before accessing maze
+                if (c_unit > 0 && c_unit < 2 * MAZE_WIDTH) { 
                     if (maze_r >= 0 && maze_r < MAZE_HEIGHT && maze_c_left >= 0 && maze_c_left < MAZE_WIDTH) {
                        if (!maze[maze_r][maze_c_left].walls[1]) current_color_ptr = COLOR_BACKGROUND;
                     }
                 }
-            } else if (r_unit % 2 == 0 && c_unit % 2 != 0) { // Horizontal wall potential
+            } else if (r_unit % 2 == 0 && c_unit % 2 != 0) { 
                 int maze_r_up = (r_unit / 2) - 1;
                 int maze_c = (c_unit - 1) / 2;
-                 if (r_unit > 0 && r_unit < 2 * MAZE_HEIGHT) { // Check bounds before accessing maze
+                 if (r_unit > 0 && r_unit < 2 * MAZE_HEIGHT) { 
                     if (maze_r_up >= 0 && maze_r_up < MAZE_HEIGHT && maze_c >=0 && maze_c < MAZE_WIDTH) {
                         if (!maze[maze_r_up][maze_c].walls[2]) current_color_ptr = COLOR_BACKGROUND;
                     }
                 }
-            } else { // Pillar
+            } else { 
                  current_color_ptr = COLOR_WALL;
             }
 
@@ -391,20 +361,15 @@ void save_image(const std::string& folder, int step_count,
 
 // --- Helper function to check if three points form a straight line ---
 bool is_straight_line(std::pair<int, int> p1, std::pair<int, int> p2, std::pair<int, int> p3) {
-    // p1 is grandparent, p2 is parent, p3 is current
     if (p1.first == -1 || p1.second == -1 ||
         p2.first == -1 || p2.second == -1 ||
         p3.first == -1 || p3.second == -1) {
-        return false; // Not enough points to form a line segment
+        return false; 
     }
-
-    // Check if direction from p1 to p2 is the same as from p2 to p3
     int dr1 = p2.first - p1.first;
     int dc1 = p2.second - p1.second;
     int dr2 = p3.first - p2.first;
     int dc2 = p3.second - p2.second;
-
-    // Since these are adjacent cells in a grid, a straight line means the step direction is identical
     return dr1 == dr2 && dc1 == dc2;
 }
 
@@ -434,7 +399,7 @@ void solve_bfs() {
     visited_solver[START_NODE.first][START_NODE.second] = true;
     visual_states[START_NODE.first][START_NODE.second] = SolverCellState::FRONTIER;
     int step = 0;
-    save_image(folder, step++, visual_states); // Save initial state
+    save_image(folder, step++, visual_states); 
 
     std::vector<std::pair<int, int>> path;
     bool found = false;
@@ -456,7 +421,6 @@ void solve_bfs() {
                 }
             }
         }
-        // Always save frames if we are processing the end node or start node (start node handled by initial save)
         if (curr == END_NODE) {
             should_save_current_step_frames = true;
         }
@@ -468,20 +432,17 @@ void solve_bfs() {
 
         if (curr == END_NODE) {
             found = true;
-            // No break here, let it save the "VISITED_PROC" state for the end node if frames are being saved
         }
 
-        // Only explore neighbors if not already found. If found, we just want to finalize this cell's visuals.
         if (!found) {
             for (int i = 0; i < 4; ++i) {
                 int nr = curr.first + dr[i];
                 int nc = curr.second + dc[i];
                 bool wall_exists = true;
-                // Determine wall presence based on direction 'i'
-                if (dr[i] == -1 && dc[i] == 0 && !maze[curr.first][curr.second].walls[0]) wall_exists = false; // Up
-                else if (dr[i] == 1  && dc[i] == 0 && !maze[curr.first][curr.second].walls[2]) wall_exists = false; // Down
-                else if (dr[i] == 0 && dc[i] == -1 && !maze[curr.first][curr.second].walls[3]) wall_exists = false; // Left
-                else if (dr[i] == 0 && dc[i] == 1  && !maze[curr.first][curr.second].walls[1]) wall_exists = false; // Right
+                if (dr[i] == -1 && dc[i] == 0 && !maze[curr.first][curr.second].walls[0]) wall_exists = false; 
+                else if (dr[i] == 1  && dc[i] == 0 && !maze[curr.first][curr.second].walls[2]) wall_exists = false; 
+                else if (dr[i] == 0 && dc[i] == -1 && !maze[curr.first][curr.second].walls[3]) wall_exists = false; 
+                else if (dr[i] == 0 && dc[i] == 1  && !maze[curr.first][curr.second].walls[1]) wall_exists = false; 
 
 
                 if (nr >= 0 && nr < MAZE_HEIGHT && nc >= 0 && nc < MAZE_WIDTH &&
@@ -499,7 +460,7 @@ void solve_bfs() {
         if (should_save_current_step_frames) {
             save_image(folder, step++, visual_states);
         }
-        if (found && curr == END_NODE) break; // Now break after saving end_node as visited
+        if (found && curr == END_NODE) break; 
     }
 
     if (found) {
@@ -511,11 +472,11 @@ void solve_bfs() {
             curr_path_node = maze[curr_path_node.first][curr_path_node.second].parent;
         }
         std::reverse(path.begin(), path.end());
-         save_image(folder, step++, visual_states, path); // Save final path
+         save_image(folder, step++, visual_states, path); 
         std::cout << "BFS: Path found. Length: " << path.size() << std::endl;
     } else {
         std::cout << "BFS: Path not found." << std::endl;
-        save_image(folder, step++, visual_states); // Save final state if not found
+        save_image(folder, step++, visual_states); 
     }
 }
 
@@ -542,7 +503,6 @@ void solve_dfs() {
 
     s.push(START_NODE);
     int step = 0;
-    // Initial frontier setup for DFS
     visual_states[START_NODE.first][START_NODE.second] = SolverCellState::FRONTIER;
     save_image(folder, step++, visual_states);
 
@@ -555,16 +515,10 @@ void solve_dfs() {
 
     while (!s.empty() && !found) {
         std::pair<int, int> curr = s.top();
-        // Don't pop yet, decide if we need to save based on curr.
-        // If curr was already visited (e.g. by another path in DFS or if it's popped again after exploring children),
-        // this logic might need adjustment. For now, assume curr is being "considered".
-
-        bool should_save_current_step_frames = true;
-        std::pair<int, int> parent_cell = maze[curr.first][curr.second].parent; // Parent is set when pushed
         
-        // For DFS, the "parent" for straight line check might be the one *before* it on the stack,
-        // or more consistently, its actual parent from the `maze[r][c].parent` field,
-        // which is set when a node is *pushed* as a child of another.
+        bool should_save_current_step_frames = true;
+        std::pair<int, int> parent_cell = maze[curr.first][curr.second].parent; 
+        
         if (parent_cell.first != -1 && parent_cell.second != -1) {
             std::pair<int, int> grandparent_cell = maze[parent_cell.first][parent_cell.second].parent;
             if (grandparent_cell.first != -1 && grandparent_cell.second != -1) {
@@ -576,13 +530,7 @@ void solve_dfs() {
         if (curr == END_NODE) {
              should_save_current_step_frames = true;
         }
-        // If curr is START_NODE, it's handled by initial save.
-        // Subsequent visits to START_NODE (if possible by algo design) would have no parent, so save.
 
-
-        // --- First potential save point for DFS step ---
-        // This shows the current cell being focused on and the current state of the stack (frontier)
-        // Clear previous frontiers that are not on stack anymore for DFS visualization
         for(int r_idx=0; r_idx<MAZE_HEIGHT; ++r_idx) {
             for(int c_idx=0; c_idx<MAZE_WIDTH; ++c_idx) {
                 if(visual_states[r_idx][c_idx] == SolverCellState::FRONTIER) {
@@ -600,36 +548,29 @@ void solve_dfs() {
             }
         }
         std::stack<std::pair<int,int>> s_copy_for_frontier_vis = s;
-        while(!s_copy_for_frontier_vis.empty()){ // Mark current stack items as frontier
+        while(!s_copy_for_frontier_vis.empty()){ 
              if(visual_states[s_copy_for_frontier_vis.top().first][s_copy_for_frontier_vis.top().second] != SolverCellState::CURRENT_PROC &&
                 visual_states[s_copy_for_frontier_vis.top().first][s_copy_for_frontier_vis.top().second] != SolverCellState::VISITED_PROC &&
-                !visited_solver[s_copy_for_frontier_vis.top().first][s_copy_for_frontier_vis.top().second] ) { // only if not yet processed/visited
+                !visited_solver[s_copy_for_frontier_vis.top().first][s_copy_for_frontier_vis.top().second] ) { 
                  visual_states[s_copy_for_frontier_vis.top().first][s_copy_for_frontier_vis.top().second] = SolverCellState::FRONTIER;
              }
             s_copy_for_frontier_vis.pop();
         }
-        // Now that frontier is updated, decide on saving
-        visual_states[curr.first][curr.second] = SolverCellState::CURRENT_PROC; // curr is being processed
+        visual_states[curr.first][curr.second] = SolverCellState::CURRENT_PROC; 
         if (should_save_current_step_frames) {
             save_image(folder, step++, visual_states);
         }
         
-        s.pop(); // Actually pop the element now
-
-        if (visited_solver[curr.first][curr.second] && curr != END_NODE) { // If already visited and not the end node, just skip (don't re-process)
-            // If we skipped saving its CURRENT_PROC but it was visited, mark it VISITED_PROC for consistency
-            // if (visual_states[curr.first][curr.second] == SolverCellState::CURRENT_PROC){ // if it was marked current
-            //      visual_states[curr.first][curr.second] = SolverCellState::VISITED_PROC;
-            // } // This might cause issues with re-coloring. Simpler: if visited, continue.
+        s.pop(); 
+        
+        if (visited_solver[curr.first][curr.second] && curr != END_NODE) { 
             continue;
         }
         
         visited_solver[curr.first][curr.second] = true;
-        // visual_states[curr.first][curr.second] already CURRENT_PROC or updated by save
 
         if (curr == END_NODE) {
             found = true;
-            // No break yet, let the "VISITED_PROC" state be saved if frames are saved for this step.
         }
 
         if (!found) {
@@ -637,27 +578,23 @@ void solve_dfs() {
                 int nr = curr.first + dr[i];
                 int nc = curr.second + dc[i];
                 bool wall_exists = true;
-                if (dr[i] == -1 && dc[i] == 0 && !maze[curr.first][curr.second].walls[0]) wall_exists = false; // Up
-                else if (dr[i] == 1  && dc[i] == 0 && !maze[curr.first][curr.second].walls[2]) wall_exists = false; // Down
-                else if (dr[i] == 0 && dc[i] == -1 && !maze[curr.first][curr.second].walls[3]) wall_exists = false; // Left
-                else if (dr[i] == 0 && dc[i] == 1  && !maze[curr.first][curr.second].walls[1]) wall_exists = false; // Right
+                if (dr[i] == -1 && dc[i] == 0 && !maze[curr.first][curr.second].walls[0]) wall_exists = false; 
+                else if (dr[i] == 1  && dc[i] == 0 && !maze[curr.first][curr.second].walls[2]) wall_exists = false; 
+                else if (dr[i] == 0 && dc[i] == -1 && !maze[curr.first][curr.second].walls[3]) wall_exists = false; 
+                else if (dr[i] == 0 && dc[i] == 1  && !maze[curr.first][curr.second].walls[1]) wall_exists = false; 
 
 
                 if (nr >= 0 && nr < MAZE_HEIGHT && nc >= 0 && nc < MAZE_WIDTH &&
                     !visited_solver[nr][nc] && !wall_exists) {
                     maze[nr][nc].parent = curr;
                     s.push({nr, nc});
-                    // visual_states[nr][nc] will be marked FRONTIER in the next iteration's stack scan, or if saved now
                 }
             }
         }
         
-        // --- Second potential save point for DFS step ---
-        // Shows curr as visited, and new stack (if any children pushed) as frontier
         visual_states[curr.first][curr.second] = SolverCellState::VISITED_PROC;
         
-        // Update frontier visualization based on the new stack state
-        for(int r_idx=0; r_idx<MAZE_HEIGHT; ++r_idx) { // Clear non-stack frontiers again
+        for(int r_idx=0; r_idx<MAZE_HEIGHT; ++r_idx) { 
             for(int c_idx=0; c_idx<MAZE_WIDTH; ++c_idx) {
                  if(visual_states[r_idx][c_idx] == SolverCellState::FRONTIER) {
                     bool is_on_stack = false;
@@ -674,7 +611,7 @@ void solve_dfs() {
             }
         }
         s_copy_for_frontier_vis = s; 
-        while(!s_copy_for_frontier_vis.empty()){ // Mark new stack items as frontier
+        while(!s_copy_for_frontier_vis.empty()){ 
             if(visual_states[s_copy_for_frontier_vis.top().first][s_copy_for_frontier_vis.top().second] != SolverCellState::CURRENT_PROC &&
                visual_states[s_copy_for_frontier_vis.top().first][s_copy_for_frontier_vis.top().second] != SolverCellState::VISITED_PROC &&
                 !visited_solver[s_copy_for_frontier_vis.top().first][s_copy_for_frontier_vis.top().second] ) {
@@ -685,7 +622,7 @@ void solve_dfs() {
         if (should_save_current_step_frames) {
             save_image(folder, step++, visual_states);
         }
-        if (found && curr == END_NODE) break; // Break after saving end_node as visited
+        if (found && curr == END_NODE) break; 
     }
 
     if (found) {
@@ -697,17 +634,17 @@ void solve_dfs() {
             curr_path_node = maze[curr_path_node.first][curr_path_node.second].parent;
         }
         std::reverse(path.begin(), path.end());
-        save_image(folder, step++, visual_states, path); // Save final path
+        save_image(folder, step++, visual_states, path); 
         std::cout << "DFS: Path found. Length: " << path.size() << std::endl;
     } else {
         std::cout << "DFS: Path not found." << std::endl;
-         save_image(folder, step++, visual_states); // Save final state if not found
+         save_image(folder, step++, visual_states); 
     }
 }
 
 
 int main() {
-    load_config("config.ini"); 
+    load_config("config.ini");
 
     if (MAZE_WIDTH <= 0 || MAZE_HEIGHT <= 0) {
         std::cerr << "Error: MAZE_WIDTH and MAZE_HEIGHT must be greater than 0. Exiting." << std::endl;
@@ -718,24 +655,36 @@ int main() {
         return 1;
     }
 
+    // Prepare the generation-specific maze structure
+    std::vector<std::vector<MazeGeneration::GenCell>> generation_maze_data;
+    generation_maze_data.resize(MAZE_HEIGHT, std::vector<MazeGeneration::GenCell>(MAZE_WIDTH));
 
-    maze.resize(MAZE_HEIGHT, std::vector<Cell>(MAZE_WIDTH));
-
-    std::cout << "Generating maze..." << std::endl;
-    int gen_start_r = (START_NODE.first >=0 && START_NODE.first < MAZE_HEIGHT) ? START_NODE.first : 0;
-    int gen_start_c = (START_NODE.second >=0 && START_NODE.second < MAZE_WIDTH) ? START_NODE.second : 0;
+    std::cout << "Generating maze using module..." << std::endl;
+    int gen_start_r = (START_NODE.first >= 0 && START_NODE.first < MAZE_HEIGHT) ? START_NODE.first : 0;
+    int gen_start_c = (START_NODE.second >= 0 && START_NODE.second < MAZE_WIDTH) ? START_NODE.second : 0;
     if (gen_start_r != START_NODE.first || gen_start_c != START_NODE.second) {
-        std::cout << "Adjusted maze generation start point to (" << gen_start_r << "," << gen_start_c << ") due to START_NODE config." << std::endl;
+        std::cout << "Adjusted maze generation start point to (" << gen_start_r << "," << gen_start_c << ") for module." << std::endl;
     }
 
-    generate_maze(gen_start_r, gen_start_c); 
-    std::cout << "Maze generated." << std::endl;
+    // Call the generation function from the module
+    MazeGeneration::generate_maze_structure(generation_maze_data, gen_start_r, gen_start_c, MAZE_WIDTH, MAZE_HEIGHT);
+
+    // Now, transfer wall data from generation_maze_data to the main 'maze' variable
+    maze.resize(MAZE_HEIGHT, std::vector<Cell>(MAZE_WIDTH));
+    for (int r = 0; r < MAZE_HEIGHT; ++r) {
+        for (int c = 0; c < MAZE_WIDTH; ++c) {
+            for (int i = 0; i < 4; ++i) {
+                maze[r][c].walls[i] = generation_maze_data[r][c].walls[i];
+            }
+            // maze[r][c].parent remains {-1,-1} by default, which is correct before solving.
+        }
+    }
+    std::cout << "Maze generated and data transferred." << std::endl;
 
     solve_bfs();
-    // Reset maze parents for DFS if BFS modified them and DFS relies on clean parent fields for its own path reconstruction
-    for(int r=0; r<MAZE_HEIGHT; ++r) {
-        for(int c=0; c<MAZE_WIDTH; ++c) {
-            maze[r][c].parent = {-1, -1}; 
+    for (int r = 0; r < MAZE_HEIGHT; ++r) {
+        for (int c = 0; c < MAZE_WIDTH; ++c) {
+            maze[r][c].parent = {-1, -1};
         }
     }
     solve_dfs();
