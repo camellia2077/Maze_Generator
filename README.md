@@ -27,16 +27,27 @@
 
 ## 文件结构
 ├── maze_generator                # 编译后的可执行文件
+
 ├── maze_generator.cpp            # 主程序文件
+
 ├── maze_solver.h                 # 迷宫求解器头文件
+
 ├── maze_solver.cpp               # 迷宫求解器实现文件
+
 ├── maze_generation_module.h      # 迷宫生成模块头文件
+
 ├── maze_generation_module.cpp    # 迷宫生成模块实现文件
+
 ├── config_loader.h               # 配置加载器头文件
+
 ├── config_loader.cpp             # 配置加载器实现文件
+
 ├── stb_image_write.h             # 用于图像输出的单头文件库
+
 ├── config.ini                    # 配置文件示例
+
 ├── bfs_frames_generated_by_XXX/  # BFS 求解过程的输出帧文件夹
+
 └── dfs_frames_generated_by_XXX/  # DFS 求解过程的输出帧文件夹
 
 ## 如何编译
