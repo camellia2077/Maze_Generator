@@ -257,4 +257,4 @@ void generate_maze_structure(std::vector<std::vector<GenCell>>& maze_grid_to_pop
     }
 }
 
-} // namespace MazeGeneration
+} 
