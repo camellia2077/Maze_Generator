@@ -15,24 +15,13 @@ const std::string GREEN_COLOR = "\033[32m";
 
 int main() {
     std::cout << "--- Parameter Loading ---" << std::endl; //
-    auto start_time_config = std::chrono::high_resolution_clock::now();
+    auto start_time_config = std::chrono::high_resolution_clock::now(); //
     ConfigLoader::load_config("config.ini"); // 加载参数
-    auto end_time_config = std::chrono::high_resolution_clock::now();
+    auto end_time_config = std::chrono::high_resolution_clock::now(); //
     std::chrono::duration<double> time_taken_config = end_time_config - start_time_config; // Duration in seconds
-    std::cout << GREEN_COLOR << std::fixed << std::setprecision(3) << "Time to load config: " << time_taken_config.count() << " s" << RESET_COLOR << std::endl;
+    std::cout << GREEN_COLOR << std::fixed << std::setprecision(3) << "Time to load config: " << time_taken_config.count() << " s" << RESET_COLOR << std::endl; //
 
-    if (ConfigLoader::MAZE_WIDTH <= 0 || ConfigLoader::MAZE_HEIGHT <= 0) {
-        std::cerr << "Error: MAZE_WIDTH and MAZE_HEIGHT must be greater than 0. Exiting." << std::endl; //
-        return 1;
-    }
-    if (ConfigLoader::UNIT_PIXELS <= 0) {
-        std::cerr << "Error: UNIT_PIXELS must be greater than 0. Exiting." << std::endl; //
-        return 1;
-    }
-    if (ConfigLoader::ACTIVE_GENERATION_ALGORITHMS.empty()) {
-        std::cerr << "Error: No maze generation algorithms selected after loading config. Exiting." << std::endl; //
-        return 1;
-    }
+    // Removed input validation checks for MAZE_WIDTH, MAZE_HEIGHT, UNIT_PIXELS, and ACTIVE_GENERATION_ALGORITHMS
 
     std::vector<std::vector<MazeGeneration::GenCell>> generation_maze_data; //
     std::vector<std::vector<MazeSolver::Cell>> solver_maze_data; //
@@ -56,11 +45,11 @@ int main() {
              }
         }
 
-        auto start_time_generation = std::chrono::high_resolution_clock::now();
+        auto start_time_generation = std::chrono::high_resolution_clock::now(); //
         MazeGeneration::generate_maze_structure(generation_maze_data, gen_start_r, gen_start_c, ConfigLoader::MAZE_WIDTH, ConfigLoader::MAZE_HEIGHT, algo_info.type); //
-        auto end_time_generation = std::chrono::high_resolution_clock::now();
+        auto end_time_generation = std::chrono::high_resolution_clock::now(); //
         std::chrono::duration<double> time_taken_generation = end_time_generation - start_time_generation; // Duration in seconds
-        std::cout << GREEN_COLOR << std::fixed << std::setprecision(3) << "Time for maze generation: " << time_taken_generation.count() << " s" << RESET_COLOR << std::endl;
+        std::cout << GREEN_COLOR << std::fixed << std::setprecision(3) << "Time for maze generation: " << time_taken_generation.count() << " s" << RESET_COLOR << std::endl; //
 
         // Transfer wall data from generation_maze_data to solver_maze_data
         for (int r = 0; r < ConfigLoader::MAZE_HEIGHT; ++r) { //
@@ -73,18 +62,18 @@ int main() {
         std::cout << "Maze generated and data transferred." << std::endl; //
 
         std::cout << "--- BFS Solving & Image Generation (" << algo_info.name << ") ---" << std::endl; //
-        auto start_time_bfs = std::chrono::high_resolution_clock::now();
+        auto start_time_bfs = std::chrono::high_resolution_clock::now(); //
         MazeSolver::solve_bfs(solver_maze_data, algo_info.name); //
-        auto end_time_bfs = std::chrono::high_resolution_clock::now();
+        auto end_time_bfs = std::chrono::high_resolution_clock::now(); //
         std::chrono::duration<double> time_taken_bfs = end_time_bfs - start_time_bfs; // Duration in seconds
-        std::cout << GREEN_COLOR << std::fixed << std::setprecision(3) << "Time for BFS solving & image generation: " << time_taken_bfs.count() << " s" << RESET_COLOR << std::endl;
+        std::cout << GREEN_COLOR << std::fixed << std::setprecision(3) << "Time for BFS solving & image generation: " << time_taken_bfs.count() << " s" << RESET_COLOR << std::endl; //
 
         std::cout << "--- DFS Solving & Image Generation (" << algo_info.name << ") ---" << std::endl; //
-        auto start_time_dfs = std::chrono::high_resolution_clock::now();
+        auto start_time_dfs = std::chrono::high_resolution_clock::now(); //
         MazeSolver::solve_dfs(solver_maze_data, algo_info.name); //
-        auto end_time_dfs = std::chrono::high_resolution_clock::now();
+        auto end_time_dfs = std::chrono::high_resolution_clock::now(); //
         std::chrono::duration<double> time_taken_dfs = end_time_dfs - start_time_dfs; // Duration in seconds
-        std::cout << GREEN_COLOR << std::fixed << std::setprecision(3) << "Time for DFS solving & image generation: " << time_taken_dfs.count() << " s" << RESET_COLOR << std::endl;
+        std::cout << GREEN_COLOR << std::fixed << std::setprecision(3) << "Time for DFS solving & image generation: " << time_taken_dfs.count() << " s" << RESET_COLOR << std::endl; //
     }
 
     std::cout << "\n--- Processing Complete ---" << std::endl; //
