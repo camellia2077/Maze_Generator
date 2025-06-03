@@ -4,26 +4,26 @@
 ## 功能特性
 
 * **多种迷宫生成算法**:
-    * 深度优先搜索 (DFS - Recursive Backtracker)
-    * Prim 算法 (Randomized Prim's Algorithm)
-    * Kruskal 算法 (Randomized Kruskal's Algorithm)
+  深度优先搜索 (DFS - Recursive Backtracker)
+  Prim 算法 (Randomized Prim's Algorithm)
+   Kruskal 算法 (Randomized Kruskal's Algorithm)
 * **两种迷宫求解算法**:
-    * 广度优先搜索 (BFS) - 保证找到最短路径
-    * 深度优先搜索 (DFS)
+  广度优先搜索 (BFS) - 保证找到最短路径
+  深度优先搜索 (DFS)
 * **可配置性**:
-    * 通过 `config.ini` 文件配置迷宫的宽度、高度、单元格像素大小。
-    * 可配置迷宫的起点和终点。
-    * 可选择一个或多个迷宫生成算法进行处理。
-    * 可自定义迷宫及求解过程可视化中使用的各种颜色。
+  通过 `config.ini` 文件配置迷宫的宽度、高度、单元格像素大小。
+  可配置迷宫的起点和终点。
+  可选择一个或多个迷宫生成算法进行处理。
+  可自定义迷宫及求解过程可视化中使用的各种颜色。
 * **可视化输出**:
-    * 为每个迷宫生成算法的每个求解过程（BFS 和 DFS）生成一系列 PNG 图片帧，保存在独立的文件夹中。
-    * 图片帧清晰展示了迷宫墙壁、路径、搜索边界、当前处理单元格以及最终找到的解决方案。
-    * 优化了帧保存，对于直线路径段会跳过部分帧以减少图片数量。
+  为每个迷宫生成算法的每个求解过程（BFS 和 DFS）生成一系列 PNG 图片帧，保存在独立的文件夹中。
+  图片帧清晰展示了迷宫墙壁、路径、搜索边界、当前处理单元格以及最终找到的解决方案。
+  优化了帧保存，对于直线路径段会跳过部分帧以减少图片数量。
 * **模块化设计**:
-    * **`config_loader`**: 负责解析 `config.ini` 配置文件。
-    * **`maze_generation_module`**: 包含迷宫生成算法的逻辑。
-    * **`maze_solver`**: 包含迷宫求解算法 (BFS, DFS) 及图像保存逻辑。
-    * **`maze_generator` (main)**: 协调各个模块，处理程序流程。
+  **`config_loader`**: 负责解析 `config.ini` 配置文件。
+  **`maze_generation_module`**: 包含迷宫生成算法的逻辑。
+  **`maze_solver`**: 包含迷宫求解算法 (BFS, DFS) 及图像保存逻辑。
+  **`maze_generator` (main)**: 协调各个模块，处理程序流程。
 
 ## 文件结构
 ├── maze_generator                # 编译后的可执行文件
