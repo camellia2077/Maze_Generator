@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include <utility> // For std::pair
-#include "maze_generation_module.h" // For MazeGeneration::MazeAlgorithmType
+#include "maze_generation.h" // For MazeGeneration::MazeAlgorithmType
 
 namespace ConfigLoader {
 
@@ -26,7 +26,9 @@ extern std::string CURRENT_GENERATION_ALGORITHM_NAME_FOR_FOLDER;
 
 // --- Color Definitions (R, G, B) ---
 extern unsigned char COLOR_BACKGROUND[3];
-extern unsigned char COLOR_WALL[3];
+extern unsigned char COLOR_WALL[3]; // Remains for now, or could be removed if fully replaced
+extern unsigned char COLOR_OUTER_WALL[3]; // New
+extern unsigned char COLOR_INNER_WALL[3]; // New
 extern unsigned char COLOR_START[3];
 extern unsigned char COLOR_END[3];
 extern unsigned char COLOR_FRONTIER[3];

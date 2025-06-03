@@ -49,9 +49,15 @@ void save_image(const std::string& folder, int step_count,
 
     for (int r_unit = 0; r_unit < img_height_units; ++r_unit) {
         for (int c_unit = 0; c_unit < img_width_units; ++c_unit) {
-            const unsigned char* current_color_ptr = ConfigLoader::COLOR_WALL;
+            const unsigned char* current_color_ptr; // Will be assigned below
 
-            if (r_unit % 2 != 0 && c_unit % 2 != 0) { // Cell interior
+            // Determine if the current unit is part of the outer frame
+            bool is_outer_frame_unit = (r_unit == 0 || r_unit == img_height_units - 1 ||
+                                        c_unit == 0 || c_unit == img_width_units - 1);
+
+            if (is_outer_frame_unit) {
+                current_color_ptr = ConfigLoader::COLOR_OUTER_WALL;
+            } else if (r_unit % 2 != 0 && c_unit % 2 != 0) { // Cell interior (and not outer frame)
                 int maze_r = (r_unit - 1) / 2;
                 int maze_c = (c_unit - 1) / 2;
                 current_color_ptr = ConfigLoader::COLOR_BACKGROUND;
@@ -69,26 +75,29 @@ void save_image(const std::string& folder, int step_count,
                      if (maze_r == ConfigLoader::END_NODE.first && maze_c == ConfigLoader::END_NODE.second && state != SolverCellState::START) current_color_ptr = ConfigLoader::COLOR_END;
                 }
 
-            } else if (r_unit % 2 != 0 && c_unit % 2 == 0) { // Potential Vertical Wall location
+            } else if (r_unit % 2 != 0 && c_unit % 2 == 0) { // Potential Vertical Wall (and not outer frame)
                 int maze_r = (r_unit - 1) / 2;
                 int maze_c_left = (c_unit / 2) - 1;
-                if (c_unit > 0 && c_unit < 2 * ConfigLoader::MAZE_WIDTH) { // Ensure it's an internal wall column
-                    if (maze_r >= 0 && maze_r < ConfigLoader::MAZE_HEIGHT && maze_c_left >= 0 && maze_c_left < ConfigLoader::MAZE_WIDTH) {
-                       // Use maze_ref instead of global maze
-                       if (!maze_ref[maze_r][maze_c_left].walls[1]) current_color_ptr = ConfigLoader::COLOR_BACKGROUND; // Check right wall of left cell
-                    }
+                // Since it's not an outer frame unit, c_unit > 0 and c_unit < 2*MAZE_WIDTH are implied for internal wall columns
+                if (maze_r >= 0 && maze_r < ConfigLoader::MAZE_HEIGHT && maze_c_left >= 0 && maze_c_left < ConfigLoader::MAZE_WIDTH) {
+                   if (!maze_ref[maze_r][maze_c_left].walls[1]) current_color_ptr = ConfigLoader::COLOR_BACKGROUND; // Check right wall of left cell
+                   else current_color_ptr = ConfigLoader::COLOR_INNER_WALL;
+                } else { // Should not happen if not outer frame, but as a fallback
+                    current_color_ptr = ConfigLoader::COLOR_INNER_WALL;
                 }
-            } else if (r_unit % 2 == 0 && c_unit % 2 != 0) { // Potential Horizontal Wall location
+            } else if (r_unit % 2 == 0 && c_unit % 2 != 0) { // Potential Horizontal Wall (and not outer frame)
                 int maze_r_up = (r_unit / 2) - 1;
                 int maze_c = (c_unit - 1) / 2;
-                 if (r_unit > 0 && r_unit < 2 * ConfigLoader::MAZE_HEIGHT) { // Ensure it's an internal wall row
-                    if (maze_r_up >= 0 && maze_r_up < ConfigLoader::MAZE_HEIGHT && maze_c >=0 && maze_c < ConfigLoader::MAZE_WIDTH) {
-                        // Use maze_ref instead of global maze
-                        if (!maze_ref[maze_r_up][maze_c].walls[2]) current_color_ptr = ConfigLoader::COLOR_BACKGROUND; // Check bottom wall of up cell
-                    }
+                // Since it's not an outer frame unit, r_unit > 0 and r_unit < 2*MAZE_HEIGHT are implied
+                if (maze_r_up >= 0 && maze_r_up < ConfigLoader::MAZE_HEIGHT && maze_c >=0 && maze_c < ConfigLoader::MAZE_WIDTH) {
+                    if (!maze_ref[maze_r_up][maze_c].walls[2]) current_color_ptr = ConfigLoader::COLOR_BACKGROUND; // Check bottom wall of up cell
+                    else current_color_ptr = ConfigLoader::COLOR_INNER_WALL;
+                } else { // Should not happen
+                     current_color_ptr = ConfigLoader::COLOR_INNER_WALL;
                 }
+            } else { // Corner/Junction points (and not outer frame)
+                current_color_ptr = ConfigLoader::COLOR_INNER_WALL;
             }
-            // Else, it's a corner or boundary wall, remains COLOR_WALL
 
             for (int py = 0; py < ConfigLoader::UNIT_PIXELS; ++py) {
                 for (int px = 0; px < ConfigLoader::UNIT_PIXELS; ++px) {
@@ -105,7 +114,7 @@ void save_image(const std::string& folder, int step_count,
         }
     }
 
-    // Draw the explicit path (corridors and cells) if provided
+    // Draw the explicit path (corridors and cells) if provided - this logic remains the same
     for(const auto& p : current_path) {
         int maze_r = p.first;
         int maze_c = p.second;
@@ -126,7 +135,7 @@ void save_image(const std::string& folder, int step_count,
             }
         }
     }
-    // Draw corridors for the current_path
+    // Draw corridors for the current_path - this logic remains the same
     if (current_path.size() > 1) {
         for (size_t i = 0; i < current_path.size() - 1; ++i) {
             std::pair<int, int> p1 = current_path[i];
@@ -170,6 +179,7 @@ void save_image(const std::string& folder, int step_count,
 
 
 // --- BFS Solver ---
+// ... (solve_bfs function remains unchanged from the provided file) ...
 void solve_bfs(std::vector<std::vector<Cell>>& maze_data, // Use passed maze_data
                const std::string& generation_algorithm_name) {
     std::string folder = "bfs_frames_generated_by_" + generation_algorithm_name;
@@ -217,14 +227,14 @@ void solve_bfs(std::vector<std::vector<Cell>>& maze_data, // Use passed maze_dat
 
     // Directions: Up, Down, Left, Right (for dr, dc)
     // Corresponding wall checks: Top (0), Bottom (2), Left (3), Right (1)
-    int dr[] = {-1, 1, 0, 0}; 
+    int dr[] = {-1, 1, 0, 0};
     int dc[] = {0, 0, -1, 1};
     // Wall indices for current cell: maze_data[curr.first][curr.second].walls[wall_check_indices[i]]
     // If moving Up (dr=-1), check current cell's Top wall (walls[0])
     // If moving Down (dr=1), check current cell's Bottom wall (walls[2])
     // If moving Left (dc=-1), check current cell's Left wall (walls[3])
     // If moving Right (dc=1), check current cell's Right wall (walls[1])
-    int wall_check_indices[] = {0, 2, 3, 1}; 
+    int wall_check_indices[] = {0, 2, 3, 1};
 
     while (!q.empty() && !found) {
         std::pair<int, int> curr = q.front();
@@ -302,6 +312,7 @@ void solve_bfs(std::vector<std::vector<Cell>>& maze_data, // Use passed maze_dat
 }
 
 // --- DFS Solver ---
+// ... (solve_dfs function remains unchanged from the provided file) ...
 void solve_dfs(std::vector<std::vector<Cell>>& maze_data, // Use passed maze_data
                const std::string& generation_algorithm_name) {
     std::string folder = "dfs_frames_generated_by_" + generation_algorithm_name;
@@ -347,10 +358,10 @@ void solve_dfs(std::vector<std::vector<Cell>>& maze_data, // Use passed maze_dat
     bool found = false;
 
     // Directions: Up, Right, Down, Left (typical DFS exploration order)
-    int dr[] = {-1, 0, 1, 0}; 
+    int dr[] = {-1, 0, 1, 0};
     int dc[] = {0, 1, 0, -1};
     // Corresponding wall checks for current cell: walls[0] (Top), walls[1] (Right), walls[2] (Bottom), walls[3] (Left)
-    int wall_check_indices[] = {0, 1, 2, 3}; 
+    int wall_check_indices[] = {0, 1, 2, 3};
 
     while (!s.empty() && !found) {
         std::pair<int, int> curr = s.top();

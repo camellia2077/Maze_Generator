@@ -20,8 +20,9 @@ std::string CURRENT_GENERATION_ALGORITHM_NAME_FOR_FOLDER;
 
 // --- Color Definitions (R, G, B) ---
 unsigned char COLOR_BACKGROUND[3] = {255, 255, 255};
-unsigned char COLOR_WALL[3] = {0, 0, 0};
-// ... (其他颜色定义保持不变) ...
+unsigned char COLOR_WALL[3] = {0, 0, 0}; // Default if specific wall colors are not loaded
+unsigned char COLOR_OUTER_WALL[3] = {74, 74, 74};    // Default Dark Gray for outer walls
+unsigned char COLOR_INNER_WALL[3] = {0, 0, 0};       // Default Black for inner walls
 unsigned char COLOR_START[3] = {0, 255, 0};
 unsigned char COLOR_END[3] = {255, 0, 0};
 unsigned char COLOR_FRONTIER[3] = {173, 216, 230};
@@ -31,7 +32,6 @@ unsigned char COLOR_SOLUTION_PATH[3] = {0, 0, 255};
 
 
 std::string trim(const std::string& str) {
-    // ... (trim 函数实现保持不变) ...
     const std::string whitespace = " \t\n\r\f\v";
     size_t start = str.find_first_not_of(whitespace);
     if (start == std::string::npos) return ""; 
@@ -40,7 +40,6 @@ std::string trim(const std::string& str) {
 }
 
 bool parse_hex_color_string(std::string hex_str, unsigned char& r, unsigned char& g, unsigned char& b) {
-    // ... (parse_hex_color_string 函数实现保持不变) ...
     hex_str = trim(hex_str);
     if (hex_str.empty()) {
         std::cerr << "Warning: Empty hex color string provided.";
@@ -76,34 +75,31 @@ bool parse_hex_color_string(std::string hex_str, unsigned char& r, unsigned char
 }
 
 void load_config(const std::string& filename) {
-    // ... (重置默认值和打开文件的逻辑保持不变) ...
     MAZE_WIDTH = 10;
     MAZE_HEIGHT = 10;
     UNIT_PIXELS = 15;
-    START_NODE = {0,0}; 
+    START_NODE = {0,0};
 
     std::ifstream ini_file(filename);
     if (!ini_file.is_open()) {
         std::cerr << "Warning: Could not open config file '" << filename << "'. Using default values for all settings." << std::endl;
-        END_NODE = {MAZE_HEIGHT - 1, MAZE_WIDTH - 1}; 
-        ACTIVE_GENERATION_ALGORITHMS.clear(); 
+        END_NODE = {MAZE_HEIGHT - 1, MAZE_WIDTH - 1};
+        ACTIVE_GENERATION_ALGORITHMS.clear();
         ACTIVE_GENERATION_ALGORITHMS.push_back({MazeGeneration::MazeAlgorithmType::DFS, "DFS"}); // Default algo
         return;
     }
-    // ... (文件解析循环前的变量声明保持不变) ...
     std::string line;
     std::string current_section;
     bool in_maze_config_section = false;
     bool in_color_config_section = false;
 
-    int temp_start_x = START_NODE.second; 
-    int temp_start_y = START_NODE.first;  
-    int temp_end_x = -1; 
+    int temp_start_x = START_NODE.second;
+    int temp_start_y = START_NODE.first; 
+    int temp_end_x = -1;
     int temp_end_y = -1;
     std::string algo_list_str;
 
     while (std::getline(ini_file, line)) {
-        // ... (行处理和 section 判断逻辑保持不变) ...
         line = trim(line);
         if (line.empty() || line[0] == ';') {
             continue;
@@ -140,11 +136,12 @@ void load_config(const std::string& filename) {
                 std::cerr << "Warning: Invalid or out of range integer for key '" << key << "' in [MazeConfig]. Skipping. Error: " << e.what() << std::endl;
             }
         } else if (in_color_config_section) {
-            // ... (颜色解析逻辑保持不变) ...
             unsigned char r, g, b;
             if (parse_hex_color_string(value_str, r, g, b)) {
                 if (key == "BackgroundColor") { COLOR_BACKGROUND[0]=r; COLOR_BACKGROUND[1]=g; COLOR_BACKGROUND[2]=b; }
-                else if (key == "WallColor") { COLOR_WALL[0]=r; COLOR_WALL[1]=g; COLOR_WALL[2]=b; }
+                else if (key == "WallColor") { COLOR_WALL[0]=r; COLOR_WALL[1]=g; COLOR_WALL[2]=b; } // Keep for backward compatibility or as a general fallback if others are not set
+                else if (key == "OuterWallColor") { COLOR_OUTER_WALL[0]=r; COLOR_OUTER_WALL[1]=g; COLOR_OUTER_WALL[2]=b; }
+                else if (key == "InnerWallColor") { COLOR_INNER_WALL[0]=r; COLOR_INNER_WALL[1]=g; COLOR_INNER_WALL[2]=b; }
                 else if (key == "StartNodeColor") { COLOR_START[0]=r; COLOR_START[1]=g; COLOR_START[2]=b; }
                 else if (key == "EndNodeColor") { COLOR_END[0]=r; COLOR_END[1]=g; COLOR_END[2]=b; }
                 else if (key == "FrontierColor") { COLOR_FRONTIER[0]=r; COLOR_FRONTIER[1]=g; COLOR_FRONTIER[2]=b; }
@@ -158,14 +155,13 @@ void load_config(const std::string& filename) {
         }
     }
     ini_file.close();
-
-    // ... (START_NODE 和 END_NODE 的设置逻辑保持不变) ...
+    // Logic for START_NODE, END_NODE, and ACTIVE_GENERATION_ALGORITHMS remains the same
     if (temp_start_x >= 0 && temp_start_x < MAZE_WIDTH && temp_start_y >= 0 && temp_start_y < MAZE_HEIGHT) {
         START_NODE = {temp_start_y, temp_start_x};
     } else {
         std::cerr << "Warning: Custom StartNode ("<< temp_start_y << "," << temp_start_x << ") from INI is out of bounds for maze dimensions ("
                   << MAZE_HEIGHT << "x" << MAZE_WIDTH << "). Using default (0,0)." << std::endl;
-        START_NODE = {0,0}; 
+        START_NODE = {0,0};
     }
     
     int final_end_y = (temp_end_y != -1) ? temp_end_y : MAZE_HEIGHT - 1;
@@ -177,13 +173,13 @@ void load_config(const std::string& filename) {
         std::cerr << "Warning: Custom/Default EndNode (" << final_end_y << "," << final_end_x 
                   << ") is out of bounds for maze dimensions (" << MAZE_HEIGHT << "x" << MAZE_WIDTH 
                   << "). Adjusting to (" << MAZE_HEIGHT -1 << "," << MAZE_WIDTH -1 << ")." << std::endl;
-        END_NODE = {MAZE_HEIGHT - 1, MAZE_WIDTH - 1}; 
+        END_NODE = {MAZE_HEIGHT - 1, MAZE_WIDTH - 1};
     }
     END_NODE.first = std::max(0, std::min(MAZE_HEIGHT - 1, END_NODE.first));
     END_NODE.second = std::max(0, std::min(MAZE_WIDTH - 1, END_NODE.second));
 
-    if (MAZE_WIDTH > 0 && MAZE_HEIGHT > 0) { 
-        if (START_NODE == END_NODE && (MAZE_WIDTH > 1 || MAZE_HEIGHT > 1)) { 
+    if (MAZE_WIDTH > 0 && MAZE_HEIGHT > 0) {
+        if (START_NODE == END_NODE && (MAZE_WIDTH > 1 || MAZE_HEIGHT > 1)) {
              std::cerr << "Warning: START_NODE and END_NODE are identical (" << START_NODE.first << "," << START_NODE.second 
                        << "). This might lead to unexpected behavior for solvers." << std::endl;
         }
@@ -197,18 +193,13 @@ void load_config(const std::string& filename) {
         while(std::getline(ss_algos, segment, ',')) {
             original_segment = trim(segment); // Trim original for a clean name
             std::string upper_segment = original_segment;
-            std::transform(upper_segment.begin(), upper_segment.end(), upper_segment.begin(), ::toupper); 
+            std::transform(upper_segment.begin(), upper_segment.end(), upper_segment.begin(), ::toupper);
             
-            // Use original_segment (or a canonical version) for AlgorithmInfo.name
-            // For simplicity, we can use a canonical name like "DFS", "Prims", etc.
-            // Or, use original_segment if you want the folder name to exactly match what's in config (after trimming).
-            // Let's use canonical names for consistency in folder naming.
-
             if (upper_segment == "DFS") {
                 ACTIVE_GENERATION_ALGORITHMS.push_back({MazeGeneration::MazeAlgorithmType::DFS, "DFS"});
             } else if (upper_segment == "PRIMS") {
                 ACTIVE_GENERATION_ALGORITHMS.push_back({MazeGeneration::MazeAlgorithmType::PRIMS, "Prims"});
-            } else if (upper_segment == "KRUSKAL") { 
+            } else if (upper_segment == "KRUSKAL") {
                 ACTIVE_GENERATION_ALGORITHMS.push_back({MazeGeneration::MazeAlgorithmType::KRUSKAL, "Kruskal"});
             } else if (!original_segment.empty()) { // Check original_segment to avoid warning for empty strings from "DFS,"
                 std::cerr << "Warning: Unknown generation algorithm '" << original_segment << "' in config. Ignoring." << std::endl;
