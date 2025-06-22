@@ -30,29 +30,46 @@
   **`maze_generator` (main)**: 协调各个模块，处理程序流程。
 
 ## 文件结构
-├── maze_generator                # 编译后的可执行文件
+```
+.
+├── maze_generator                   # 编译后的可执行文件
+│   └── (链接) maze_generator.cpp, maze_solver.cpp, maze_generation_module.cpp, config_loader.cpp
+│
+├── maze_generator.cpp               # 主程序文件
+│   ├── #include "maze_generation.h"   // 包含迷宫生成模块的定义
+│   ├── #include "config_loader.h"      // 包含配置加载器的定义
+│   └── #include "maze_solver.h"        // 包含迷宫求解器的定义
+│
+├── maze_solver.h                    # 迷宫求解器头文件
+│   └── (被 maze_solver.cpp, maze_generator.cpp 包含)
+│
+├── maze_solver.cpp                  # 迷宫求解器实现文件
+│   ├── #include "maze_solver.h"       // 包含自身的头文件
+│   ├── #include "config_loader.h"      // 包含配置加载器的定义 (用于颜色、尺寸等配置)
+│   └── #include "stb_image_write.h"    // 包含图像输出库的实现
+│
+├── maze_generation_module.h         # 迷宫生成模块头文件
+│   └── (被 maze_generation_module.cpp, config_loader.h, maze_generator.cpp 包含)
+│
+├── maze_generation_module.cpp       # 迷宫生成模块实现文件
+│   └── #include "maze_generation.h"   // 包含自身的头文件
+│
+├── config_loader.h                  # 配置加载器头文件
+│   ├── #include "maze_generation.h"   // 包含迷宫生成算法类型定义 (用于 AlgorithmInfo 结构体)
+│   └── (被 config_loader.cpp, maze_solver.cpp, maze_generator.cpp 包含)
+│
+├── config_loader.cpp                # 配置加载器实现文件
+│   └── #include "config_loader.h"      // 包含自身的头文件
+│
+├── stb_image_write.h                # 用于图像输出的单头文件库
+│   └── (被 maze_solver.cpp 包含，并且需要 STB_IMAGE_WRITE_IMPLEMENTATION 定义)
+│
+├── config.ini                       # 配置文件示例 (被 config_loader.cpp 读取)
+│
+├── bfs_frames_generated_by_XXX/     # BFS 求解过程的输出帧文件夹
+│
+└── dfs_frames_generated_by_XXX/     # DFS 求解过程的输出帧文件夹
+```
 
-├── maze_generator.cpp            # 主程序文件
-
-├── maze_solver.h                 # 迷宫求解器头文件
-
-├── maze_solver.cpp               # 迷宫求解器实现文件
-
-├── maze_generation_module.h      # 迷宫生成模块头文件
-
-├── maze_generation_module.cpp    # 迷宫生成模块实现文件
-
-├── config_loader.h               # 配置加载器头文件
-
-├── config_loader.cpp             # 配置加载器实现文件
-
-├── stb_image_write.h             # 用于图像输出的单头文件库
-
-├── config.ini                    # 配置文件示例
-
-├── bfs_frames_generated_by_XXX/  # BFS 求解过程的输出帧文件夹
-
-└── dfs_frames_generated_by_XXX/  # DFS 求解过程的输出帧文件夹
-
-## 如何编译
-g++ -std=c++17 -O3 maze_generator.cpp config_loader.cpp maze_generation_module.cpp maze_solver.cpp -o maze_generator -lstdc++fs
+## 编译
+在msys64中运行bash.sh
