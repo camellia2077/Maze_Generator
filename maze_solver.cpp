@@ -1,3 +1,8 @@
+/*
+ * 使用了 stb_image_write.h 库来保存生成的图片。
+ * stb_image_write.h by Sean Barrett and contributors.
+ * Link: https://github.com/nothings/stb
+ */
 #include "maze_solver.h"
 #include "config_loader.h" // Required for accessing configuration like colors, dimensions
 
