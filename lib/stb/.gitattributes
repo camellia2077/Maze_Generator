@@ -1,0 +1,3 @@
+# 将 lib 目录标记为第三方代码 (vendored)
+# 这会让 GitHub 在语言统计和代码 diff 中忽略此目录下的所有文件
+lib/ linguist-vendored

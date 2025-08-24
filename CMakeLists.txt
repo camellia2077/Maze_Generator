@@ -15,17 +15,23 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -flto")
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "-s")
 
 # 定义可执行文件及其源文件
+# 源文件现在位于 src/ 目录下
 add_executable(maze_generator_app
-    maze_generator.cpp
-    config_loader.cpp
-    maze_generation.cpp
-    maze_solver.cpp
+    src/maze_generator.cpp
+    src/config_loader.cpp
+    src/maze_generation.cpp
+    src/maze_solver.cpp
 )
 
-# --- 修改此处以抑制第三方库的警告 ---
-# 将包含 stb_image_write.h 的目录标记为 SYSTEM，编译器会忽略来自系统目录的警告
+# --- 修改此处以包含头文件目录 ---
+# 将 src 目录添加为常规包含目录，以便项目内部的头文件可以被找到
+target_include_directories(maze_generator_app PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+# 将第三方库 lib/stb 目录标记为 SYSTEM，编译器会忽略来自该目录的警告
 target_include_directories(maze_generator_app SYSTEM PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/stb
 )
 
 # 为项目开启常规警告（这些警告不会应用到上面的 SYSTEM 目录）
@@ -36,5 +42,6 @@ elseif(MSVC)
 endif()
 
 # 显示配置信息
-message(STATUS "Configured MazeGenerator project. Build with your chosen generator.")
+message(STATUS "Configured MazeGenerator project.")
+message(STATUS "Build with your chosen generator.")
 message(STATUS "C++ Standard: ${CMAKE_CXX_STANDARD}")
