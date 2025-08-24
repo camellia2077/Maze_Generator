@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# 这是一个在 MSYS64 环境下为 MazeGenerator 项目自动化构建过程的脚本。
-# 它会自动切换到脚本所在的目录，确保可以在任何路径下正确执行。
-# 编译完成后，可执行文件会保留在 build 目录中。
-
 # 如果任何命令执行失败，立即退出脚本
 set -e
 
@@ -16,17 +12,14 @@ echo "当前工作目录已切换到: $(pwd)"
 BUILD_DIR="build"
 EXECUTABLE_NAME="maze_generator_app.exe"
 
-# --- 第1步: 清理 ---
-# 检查构建目录是否存在，如果存在则删除它以进行干净的构建
-if [ -d "$BUILD_DIR" ]; then
-    echo "正在删除已存在的 build 目录..."
-    rm -rf "$BUILD_DIR"
+# --- 新增步骤: 检查并创建构建目录 ---
+# 检查构建目录是否存在，如果不存在则创建它
+if [ ! -d "$BUILD_DIR" ]; then
+  echo "构建目录 '$BUILD_DIR' 不存在，正在创建..."
+  mkdir "$BUILD_DIR"
 fi
 
-# --- 第2步: 配置 ---
-# 创建一个新的构建目录并进入该目录
-echo "正在创建 build 目录..."
-mkdir "$BUILD_DIR"
+# 进入构建目录
 cd "$BUILD_DIR"
 
 # 运行 CMake 来配置项目并生成 Makefile
