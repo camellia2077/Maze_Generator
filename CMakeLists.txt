@@ -22,25 +22,24 @@ else()
     message(STATUS "ccache not found, proceeding without it.")
 endif()
 
-# 定义可执行文件及其源文件
-# 新增了 src/pch.cpp 用于生成预编译头文件
+# 定义可执行文件及其源文件 (已更新为新的模块化路径)
 add_executable(maze_generator_app
-    src/maze_generator.cpp
-    src/config_loader.cpp
-    src/maze_generation.cpp
-    src/maze_solver.cpp
-    src/pch.cpp
+    src/main.cpp
+    src/common/pch.cpp
+    src/config/config_loader.cpp
+    src/generation/maze_generation.cpp
+    src/solver/maze_solver.cpp
 )
 
 # --- 启用预编译头文件 (PCH) ---
-# 将 src/pch.h 指定为目标 maze_generator_app 的预编译头文件
-# CMake 会自动处理 PCH 的创建和使用，并将其包含到所有源文件中
+# 更新 pch.h 的路径
 target_precompile_headers(maze_generator_app PRIVATE
-    src/pch.h
+    src/common/pch.h
 )
 
 # --- 添加头文件目录 ---
-# 将 src 目录添加为常规包含目录
+# (*** 此处已修改 ***)
+# 将 src 目录作为根包含目录，以支持 "module/header.h" 形式的绝对路径引用
 target_include_directories(maze_generator_app PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
@@ -56,6 +55,19 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 elseif(MSVC)
     target_compile_options(maze_generator_app PRIVATE /W4)
 endif()
+
+# --- 新增命令：构建后复制配置文件 ---
+# 这个命令会在 maze_generator_app 可执行文件构建完成后，
+# 将 config/config.ini 文件复制到可执行文件所在的目录。
+# $<TARGET_FILE_DIR:maze_generator_app> 是一个生成器表达式，
+# 它会自动解析为目标文件所在的目录。
+add_custom_command(
+    TARGET maze_generator_app POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/config/config.ini
+            $<TARGET_FILE_DIR:maze_generator_app>
+    COMMENT "Copying config.ini to output directory"
+)
 
 # 显示配置信息
 message(STATUS "Configured MazeGenerator project.")
