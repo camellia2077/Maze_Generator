@@ -1,0 +1,27 @@
+# Maze Configuration File
+
+[MazeConfig]
+MazeWidth = 12
+MazeHeight = 12
+UnitPixels = 25
+# ;e.g., DFS,PRIMS,KRUSKAL
+GenerationAlgorithms = [ "PRIMS", "KRUSKAL" ]
+
+; You can also add StartNodeX, StartNodeY, EndNodeX, EndNodeY if you want them to be configurable
+; Example:
+; StartNodeX = 0
+; StartNodeY = 0
+; EndNodeX = 5 ; MazeHeight - 1 (remember to adjust if MazeHeight changes)
+; EndNodeY = 5 ; MazeWidth - 1  (remember to adjust if MazeWidth changes)
+
+[ColorConfig]
+# TOML原生支持字符串，和INI一样
+BackgroundColor = "#FFFFFF"
+OuterWallColor = "#4A4A4A"
+InnerWallColor = "#000000"
+StartNodeColor = "#00FF00"
+EndNodeColor = "#FF0000"
+FrontierColor = "#ADD8E6"
+VisitedColor = "#D3D3D3"
+CurrentProcessingColor = "#FFA500"
+SolutionPathColor = "#0099CC"
