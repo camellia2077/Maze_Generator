@@ -22,7 +22,7 @@ else()
     message(STATUS "ccache not found, proceeding without it.")
 endif()
 
-# 定义可执行文件及其源文件 (已更新为新的模块化路径)
+# 定义可执行文件及其源文件
 add_executable(maze_generator_app
     src/main.cpp
     src/common/pch.cpp
@@ -32,19 +32,23 @@ add_executable(maze_generator_app
 )
 
 # --- 启用预编译头文件 (PCH) ---
-# 更新 pch.h 的路径
 target_precompile_headers(maze_generator_app PRIVATE
     src/common/pch.h
 )
 
 # --- 添加头文件目录 ---
-# (*** 此处已修改 ***)
 # 将 src 目录作为根包含目录，以支持 "module/header.h" 形式的绝对路径引用
 target_include_directories(maze_generator_app PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-# 将第三方库 lib 目录标记为 SYSTEM
+# (*** 新增 ***)
+# 将我们存放第三方库的 vendor 目录添加进来
+target_include_directories(maze_generator_app PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/vendor
+)
+
+# 将第三方库 stb 目录标记为 SYSTEM
 target_include_directories(maze_generator_app SYSTEM PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/stb
 )
@@ -56,17 +60,15 @@ elseif(MSVC)
     target_compile_options(maze_generator_app PRIVATE /W4)
 endif()
 
-# --- 新增命令：构建后复制配置文件 ---
-# 这个命令会在 maze_generator_app 可执行文件构建完成后，
-# 将 config/config.ini 文件复制到可执行文件所在的目录。
-# $<TARGET_FILE_DIR:maze_generator_app> 是一个生成器表达式，
-# 它会自动解析为目标文件所在的目录。
+# --- 构建后复制配置文件 (已更新) ---
+# 这个命令会在构建完成后，将 config.toml 文件复制到可执行文件所在的目录
 add_custom_command(
     TARGET maze_generator_app POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy
-            ${CMAKE_CURRENT_SOURCE_DIR}/config/config.ini
+            # (*** 此处已修改 ***)
+            ${CMAKE_CURRENT_SOURCE_DIR}/config/config.toml
             $<TARGET_FILE_DIR:maze_generator_app>
-    COMMENT "Copying config.ini to output directory"
+    COMMENT "Copying config.toml to output directory"
 )
 
 # 显示配置信息
