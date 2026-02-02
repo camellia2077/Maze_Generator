@@ -1,86 +1,249 @@
+#include <chrono>  // Required for high-precision timing
+#include <filesystem>
+#include <iomanip>  // Required for std::fixed and std::setprecision
 #include <iostream>
-#include <vector>
-#include <string>
 #include <random>
-#include <chrono> // Required for high-precision timing
-#include <iomanip> // Required for std::fixed and std::setprecision
+#include <string>
+#include <vector>
 
-#include "generation/maze_generation.h"
-#include "config/config_loader.h"
-#include "solver/maze_solver.h"
+#include "application/services/maze_generation.h"
+#include "application/services/maze_solver.h"
+#include "cli/commands/generation_algorithms_command.h"
+#include "cli/commands/version_command.h"
+#include "cli/framework/cli_app.h"
+#include "infrastructure/config/config_loader.h"
+#include "infrastructure/graphics/maze_renderer.h"
 
 // ANSI escape codes for colors
-const std::string RESET_COLOR = "\033[0m";
-const std::string GREEN_COLOR = "\033[32m";
+const std::string kResetColor = "\033[0m";
+const std::string kGreenColor = "\033[32m";
+const std::string kConfigFilename = "config.toml";
+const std::string kConfigDirname = "config";
 
-int main() {
-    std::cout << "--- Parameter Loading ---" << std::endl;
-    auto start_time_config = std::chrono::high_resolution_clock::now();
-    
-    // 修改这里，加载 config.toml
-    ConfigLoader::load_config("config.toml"); 
-    
-    auto end_time_config = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> time_taken_config = end_time_config - start_time_config; // Duration in seconds
-    std::cout << GREEN_COLOR << std::fixed << std::setprecision(3) << "Time to load config: " << time_taken_config.count() << " s" << RESET_COLOR << std::endl;
+namespace {
 
-    // ... (main 函数的其余部分保持不变) ...
+using Clock = std::chrono::high_resolution_clock;
 
-    std::vector<std::vector<MazeGeneration::GenCell>> generation_maze_data; 
-    std::vector<std::vector<MazeSolver::Cell>> solver_maze_data; 
+auto BuildConfigPath(const char* argv0) -> std::filesystem::path {
+  const std::filesystem::path kExePath = std::filesystem::absolute(argv0);
+  return kExePath.parent_path() / kConfigDirname / kConfigFilename;
+}
 
-    for (const auto& algo_info : ConfigLoader::ACTIVE_GENERATION_ALGORITHMS) { 
-        std::cout << "\n--- Processing for Maze Generation Algorithm: "
-                  << algo_info.name << " ---" << std::endl; 
-
-        generation_maze_data.assign(ConfigLoader::MAZE_HEIGHT, std::vector<MazeGeneration::GenCell>(ConfigLoader::MAZE_WIDTH)); 
-        solver_maze_data.assign(ConfigLoader::MAZE_HEIGHT, std::vector<MazeSolver::Cell>(ConfigLoader::MAZE_WIDTH)); 
-        
-        std::cout << "--- Maze Generation (" << algo_info.name << ") ---" << std::endl; 
-        int gen_start_r = (ConfigLoader::START_NODE.first >= 0 && ConfigLoader::START_NODE.first < ConfigLoader::MAZE_HEIGHT) ? ConfigLoader::START_NODE.first : 0; 
-        int gen_start_c = (ConfigLoader::START_NODE.second >= 0 && ConfigLoader::START_NODE.second < ConfigLoader::MAZE_WIDTH) ? ConfigLoader::START_NODE.second : 0; 
-
-        if (!(ConfigLoader::START_NODE.first >= 0 && ConfigLoader::START_NODE.first < ConfigLoader::MAZE_HEIGHT &&
-              ConfigLoader::START_NODE.second >= 0 && ConfigLoader::START_NODE.second < ConfigLoader::MAZE_WIDTH)) { 
-             if (algo_info.type == MazeGeneration::MazeAlgorithmType::DFS || algo_info.type == MazeGeneration::MazeAlgorithmType::PRIMS) { 
-                std::cout << "Adjusted maze generation start point to (" << gen_start_r << "," << gen_start_c
-                          << ") due to out-of-bounds config START_NODE for DFS/Prims." << std::endl; 
-             }
-        }
-
-        auto start_time_generation = std::chrono::high_resolution_clock::now(); 
-        MazeGeneration::generate_maze_structure(generation_maze_data, gen_start_r, gen_start_c, ConfigLoader::MAZE_WIDTH, ConfigLoader::MAZE_HEIGHT, algo_info.type); 
-        auto end_time_generation = std::chrono::high_resolution_clock::now(); 
-        std::chrono::duration<double> time_taken_generation = end_time_generation - start_time_generation; // Duration in seconds
-        std::cout << GREEN_COLOR << std::fixed << std::setprecision(3) << "Time for maze generation: " << time_taken_generation.count() << " s" << RESET_COLOR << std::endl; 
-
-        // Transfer wall data from generation_maze_data to solver_maze_data
-        for (int r = 0; r < ConfigLoader::MAZE_HEIGHT; ++r) { 
-            for (int c = 0; c < ConfigLoader::MAZE_WIDTH; ++c) { 
-                for (int i = 0; i < 4; ++i) { 
-                    solver_maze_data[r][c].walls[i] = generation_maze_data[r][c].walls[i]; 
-                }
-            }
-        }
-        std::cout << "Maze generated and data transferred." << std::endl; 
-
-        std::cout << "--- BFS Solving & Image Generation (" << algo_info.name << ") ---" << std::endl; 
-        auto start_time_bfs = std::chrono::high_resolution_clock::now(); 
-        MazeSolver::solve_bfs(solver_maze_data, algo_info.name); 
-        auto end_time_bfs = std::chrono::high_resolution_clock::now(); 
-        std::chrono::duration<double> time_taken_bfs = end_time_bfs - start_time_bfs; // Duration in seconds
-        std::cout << GREEN_COLOR << std::fixed << std::setprecision(3) << "Time for BFS solving & image generation: " << time_taken_bfs.count() << " s" << RESET_COLOR << std::endl; 
-
-        std::cout << "--- DFS Solving & Image Generation (" << algo_info.name << ") ---" << std::endl; 
-        auto start_time_dfs = std::chrono::high_resolution_clock::now(); 
-        MazeSolver::solve_dfs(solver_maze_data, algo_info.name); 
-        auto end_time_dfs = std::chrono::high_resolution_clock::now(); 
-        std::chrono::duration<double> time_taken_dfs = end_time_dfs - start_time_dfs; // Duration in seconds
-        std::cout << GREEN_COLOR << std::fixed << std::setprecision(3) << "Time for DFS solving & image generation: " << time_taken_dfs.count() << " s" << RESET_COLOR << std::endl; 
+void PrintAlgorithmList(
+    const std::vector<Config::AlgorithmInfo>& algorithms) {
+  for (size_t index = 0; index < algorithms.size(); ++index) {
+    std::cout << algorithms[index].name;
+    if (index + 1 < algorithms.size()) {
+      std::cout << ", ";
     }
+  }
+  std::cout << std::endl;
+}
 
-    std::cout << "\n--- Processing Complete ---" << std::endl; 
-    std::cout << "All selected algorithms processed. Images saved in respective folders." << std::endl; 
+void PrintConfigSummary(const Config::AppConfig& config,
+                        const std::filesystem::path& config_path) {
+  std::cout << "Configuration successfully loaded from "
+            << config_path.string() << std::endl;
+  std::cout << "Maze Dimensions: " << config.maze.width << "x"
+            << config.maze.height
+            << ", Unit Pixels: " << config.maze.unit_pixels << std::endl;
+  std::cout << "Start Node: (" << config.maze.start_node.first << ","
+            << config.maze.start_node.second << "), End Node: ("
+            << config.maze.end_node.first << ","
+            << config.maze.end_node.second << ")" << std::endl;
+  std::cout << "Selected Generation Algorithms: ";
+  PrintAlgorithmList(config.maze.generation_algorithms);
+}
 
-    return 0;
+void PrintLoadWarnings(const std::vector<std::string>& warnings) {
+  for (const auto& warning : warnings) {
+    std::cerr << warning << "\n";
+  }
+}
+
+auto IsStartNodeValid(const Config::MazeConfig& maze) -> bool {
+  return maze.start_node.first >= 0 &&
+         maze.start_node.first < maze.height &&
+         maze.start_node.second >= 0 &&
+         maze.start_node.second < maze.width;
+}
+
+auto ResolveStartNode(const Config::MazeConfig& maze) -> std::pair<int, int> {
+  if (IsStartNodeValid(maze)) {
+    return maze.start_node;
+  }
+  return {0, 0};
+}
+
+void MaybeLogAdjustedStart(const Config::MazeConfig& maze,
+                           const Config::AlgorithmInfo& algo_info,
+                           int start_row,
+                           int start_col) {
+  if (IsStartNodeValid(maze)) {
+    return;
+  }
+
+  if (algo_info.type == MazeGeneration::MazeAlgorithmType::DFS ||
+      algo_info.type == MazeGeneration::MazeAlgorithmType::PRIMS) {
+    std::cout << "Adjusted maze generation start point to (" << start_row
+              << "," << start_col
+              << ") due to out-of-bounds config START_NODE for DFS/Prims."
+              << std::endl;
+  }
+}
+
+auto PrepareMazeGrid(const Config::MazeConfig& maze)
+    -> MazeGeneration::MazeGrid {
+  const auto kGridHeight = static_cast<size_t>(maze.height);
+  const auto kGridWidth = static_cast<size_t>(maze.width);
+  return {kGridHeight, MazeGeneration::MazeGrid::value_type(kGridWidth)};
+}
+
+void RunSolverAndRender(const MazeGeneration::MazeGrid& maze_grid,
+                        const Config::AlgorithmInfo& algo_info,
+                        const Config::AppConfig& config,
+                        MazeSolver::SolverAlgorithmType solver_type,
+                        const char* solver_label) {
+  std::cout << "--- " << solver_label << " Solving & Image Generation ("
+            << algo_info.name << ") ---" << std::endl;
+  const auto kStartTime = Clock::now();
+  const auto kResult = MazeSolver::Solve(maze_grid, solver_type, config);
+  const auto kRenderResult =
+      MazeSolver::RenderSearchResult(kResult, maze_grid, solver_type,
+                                     algo_info.name, config);
+  const std::string kSolverName = MazeSolver::AlgorithmName(solver_type);
+  const std::string kDisplayName =
+      kSolverName.empty() ? "Solver" : kSolverName;
+  if (!kRenderResult.ok) {
+    std::cerr << kDisplayName << ": " << kRenderResult.error << std::endl;
+  } else {
+    std::cout << "Rendered " << kRenderResult.frames_written << " frames"
+              << " for " << kDisplayName << " (maze generated by "
+              << algo_info.name << ") in " << kRenderResult.output_folder
+              << std::endl;
+  }
+  const auto kEndTime = Clock::now();
+  const auto kTimeTaken =
+      std::chrono::duration<double>(kEndTime - kStartTime);
+  std::cout << kGreenColor << std::fixed << std::setprecision(3)
+            << "Time for " << solver_label
+            << " solving & image generation: " << kTimeTaken.count() << " s"
+            << kResetColor << std::endl;
+}
+
+void RunGenerationForAlgorithm(const Config::AppConfig& config,
+                               const Config::AlgorithmInfo& algo_info) {
+  std::cout << "\n--- Processing for Maze Generation Algorithm: "
+            << algo_info.name << " ---" << std::endl;
+
+  auto maze_grid = PrepareMazeGrid(config.maze);
+
+  std::cout << "--- Maze Generation (" << algo_info.name << ") ---"
+            << std::endl;
+  const auto kStartNode = ResolveStartNode(config.maze);
+  const int kGenStartRow = kStartNode.first;
+  const int kGenStartCol = kStartNode.second;
+  MaybeLogAdjustedStart(config.maze, algo_info, kGenStartRow, kGenStartCol);
+
+  const auto kStartTime = Clock::now();
+  MazeGeneration::generate_maze_structure(maze_grid, kGenStartRow,
+                                          kGenStartCol, config.maze.width,
+                                          config.maze.height, algo_info.type);
+  const auto kEndTime = Clock::now();
+  const auto kTimeTaken =
+      std::chrono::duration<double>(kEndTime - kStartTime);
+  std::cout << kGreenColor << std::fixed << std::setprecision(3)
+            << "Time for maze generation: " << kTimeTaken.count() << " s"
+            << kResetColor << std::endl;
+
+  std::cout << "Maze generated." << std::endl;
+
+  RunSolverAndRender(maze_grid, algo_info, config,
+                     MazeSolver::SolverAlgorithmType::BFS, "BFS");
+  RunSolverAndRender(maze_grid, algo_info, config,
+                     MazeSolver::SolverAlgorithmType::DFS, "DFS");
+}
+
+void RunGenerationPipeline(const Config::AppConfig& config) {
+  for (const auto& algo_info : config.maze.generation_algorithms) {
+    RunGenerationForAlgorithm(config, algo_info);
+  }
+}
+
+void RegisterBuiltInCommands(Cli::CliApp& cli) {
+  cli.register_command({.name = "run",
+                        .description = "Run maze generation + solving pipeline",
+                        .handler = [](const std::vector<std::string>& args,
+                                      Cli::CommandContext& ctx) -> int {
+                          if (!args.empty()) {
+                            ctx.err << "Unknown option: " << args.front()
+                                    << "\n";
+                            return 1;
+                          }
+                          return 0;
+                        },
+                        .exit_after = false});
+  cli.register_command({.name = "help",
+                        .description = "Show available commands",
+                        .handler = [&cli](const std::vector<std::string>&,
+                                          Cli::CommandContext& ctx) -> int {
+                          cli.print_help(ctx.out);
+                          return 0;
+                        }});
+}
+
+auto RunCli(Cli::CliApp& cli,
+            int argc,
+            char** argv,
+            Config::AppConfig& config,
+            int& exit_code) -> bool {
+  Cli::CommandContext cli_ctx{
+      .config = config, .out = std::cout, .err = std::cerr};
+  bool handled = false;
+  exit_code = cli.run(argc, argv, cli_ctx, handled);
+  return handled;
+}
+
+}  // namespace
+
+auto main(int argc, char** argv) -> int {
+  std::cout << "--- Parameter Loading ---" << std::endl;
+  const auto kStartTimeConfig = Clock::now();
+
+  const auto kConfigPath = BuildConfigPath(argv[0]);
+  ConfigLoader::LoadResult load_result =
+      ConfigLoader::load_config(kConfigPath.string());
+  Config::AppConfig config = std::move(load_result.config);
+  if (!load_result.ok) {
+    std::cerr << load_result.error << "\nUsing default values.\n";
+  } else {
+    PrintConfigSummary(config, kConfigPath);
+  }
+  PrintLoadWarnings(load_result.warnings);
+
+  Cli::CliApp cli;
+  Cli::RegisterVersionCommand(cli);
+  Cli::RegisterGenerationAlgorithmsCommand(cli);
+  RegisterBuiltInCommands(cli);
+
+  int cli_code = 0;
+  if (RunCli(cli, argc, argv, config, cli_code)) {
+    return cli_code;
+  }
+
+  const auto kEndTimeConfig = Clock::now();
+  const auto kTimeTakenConfig =
+      std::chrono::duration<double>(kEndTimeConfig - kStartTimeConfig);
+  std::cout << kGreenColor << std::fixed << std::setprecision(3)
+            << "Time to load config: " << kTimeTakenConfig.count() << " s"
+            << kResetColor << std::endl;
+
+  RunGenerationPipeline(config);
+
+  std::cout << "\n--- Processing Complete ---" << std::endl;
+  std::cout << "All selected algorithms processed. Images saved in respective "
+               "folders."
+            << std::endl;
+
+  return 0;
 }
