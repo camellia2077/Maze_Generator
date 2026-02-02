@@ -1,3 +1,13 @@
+# 2026-02-02 - v0.2.2
+- 新增 SearchAlgorithms 配置项，搜索算法不再固定为 BFS/DFS，可在 config.toml 中指定。
+- 读取 SearchAlgorithms 为空时直接报错终止，避免默认隐式回退。
+- 启动摘要输出搜索算法列表，保持配置与执行一致。
+- 新增迷宫生成算法：Recursive Division、Growing Tree，并加入配置示例说明。
+- 新增搜索算法：Dijkstra、Greedy Best-First，并补充配置示例。
+- 新增 CLI 子命令与选项支持 SearchAlgorithms，便于运行时覆盖搜索算法列表。
+- 搜索结果输出目录按搜索算法分层（search algorithm / generation），避免不同搜索算法混用同一目录。
+
+
 # 2026-02-02 - v0.2.1
 - 统一构建入口：sh 脚本仅转发参数，build.py 支持 target/build-type，并为 clang-tidy 提供逐文件实时输出与 -fix。
 - CMake 顶层开启编译数据库，clang-tidy 读取 compile_commands.json；检查范围限定在 src 并排除第三方目录。

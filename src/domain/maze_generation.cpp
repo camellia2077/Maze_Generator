@@ -12,6 +12,7 @@ namespace {
 
 using Grid = MazeDomain::MazeGrid;
 using Direction = MazeDomain::Direction;
+using CellPosition = std::pair<int, int>;
 
 struct DirectionInfo {
   int dr;
@@ -23,6 +24,8 @@ struct GridSize {
   int width;
   int height;
 };
+
+constexpr int kMinDivisionSpan = 2;
 
 constexpr std::array<DirectionInfo, 4> kDirectionTable = {{
     {.dr = -1, .dc = 0, .opposite = Direction::Down},   // Up
@@ -52,6 +55,95 @@ auto CreateVisitedGrid(GridSize grid_size)
   const auto kWidthSize = static_cast<size_t>(grid_size.width);
   return std::vector<std::vector<bool>>(kHeightSize,
                                         std::vector<bool>(kWidthSize, false));
+}
+
+void ResetWallsForDivision(Grid& maze_grid, int width, int height) {
+  for (int row_index = 0; row_index < height; ++row_index) {
+    for (int col_index = 0; col_index < width; ++col_index) {
+      for (bool& wall : maze_grid[row_index][col_index].walls) {
+        wall = false;
+      }
+      if (row_index == 0) {
+        maze_grid[row_index][col_index]
+            .walls[DirectionIndex(Direction::Up)] = true;
+      }
+      if (row_index == height - 1) {
+        maze_grid[row_index][col_index]
+            .walls[DirectionIndex(Direction::Down)] = true;
+      }
+      if (col_index == 0) {
+        maze_grid[row_index][col_index]
+            .walls[DirectionIndex(Direction::Left)] = true;
+      }
+      if (col_index == width - 1) {
+        maze_grid[row_index][col_index]
+            .walls[DirectionIndex(Direction::Right)] = true;
+      }
+    }
+  }
+}
+
+void AddHorizontalWall(Grid& maze_grid, int wall_row, int col_start,
+                       int col_end, int gap_col) {
+  for (int col_index = col_start; col_index <= col_end; ++col_index) {
+    if (col_index == gap_col) {
+      continue;
+    }
+    maze_grid[wall_row][col_index]
+        .walls[DirectionIndex(Direction::Down)] = true;
+    maze_grid[wall_row + 1][col_index]
+        .walls[DirectionIndex(Direction::Up)] = true;
+  }
+}
+
+void AddVerticalWall(Grid& maze_grid, int wall_col, int row_start, int row_end,
+                     int gap_row) {
+  for (int row_index = row_start; row_index <= row_end; ++row_index) {
+    if (row_index == gap_row) {
+      continue;
+    }
+    maze_grid[row_index][wall_col]
+        .walls[DirectionIndex(Direction::Right)] = true;
+    maze_grid[row_index][wall_col + 1]
+        .walls[DirectionIndex(Direction::Left)] = true;
+  }
+}
+
+void DivideRegion(Grid& maze_grid, int row_start, int row_end, int col_start,
+                  int col_end, std::mt19937& engine) {
+  const int kRegionHeight = row_end - row_start + 1;
+  const int kRegionWidth = col_end - col_start + 1;
+  if (kRegionHeight < kMinDivisionSpan || kRegionWidth < kMinDivisionSpan) {
+    return;
+  }
+
+  bool divide_horizontally = false;
+  if (kRegionHeight > kRegionWidth) {
+    divide_horizontally = true;
+  } else if (kRegionWidth > kRegionHeight) {
+    divide_horizontally = false;
+  } else {
+    std::bernoulli_distribution coin_flip(0.5);
+    divide_horizontally = coin_flip(engine);
+  }
+
+  if (divide_horizontally) {
+    std::uniform_int_distribution<int> wall_dist(row_start, row_end - 1);
+    std::uniform_int_distribution<int> gap_dist(col_start, col_end);
+    const int kWallRow = wall_dist(engine);
+    const int kGapCol = gap_dist(engine);
+    AddHorizontalWall(maze_grid, kWallRow, col_start, col_end, kGapCol);
+    DivideRegion(maze_grid, row_start, kWallRow, col_start, col_end, engine);
+    DivideRegion(maze_grid, kWallRow + 1, row_end, col_start, col_end, engine);
+  } else {
+    std::uniform_int_distribution<int> wall_dist(col_start, col_end - 1);
+    std::uniform_int_distribution<int> gap_dist(row_start, row_end);
+    const int kWallCol = wall_dist(engine);
+    const int kGapRow = gap_dist(engine);
+    AddVerticalWall(maze_grid, kWallCol, row_start, row_end, kGapRow);
+    DivideRegion(maze_grid, row_start, row_end, col_start, kWallCol, engine);
+    DivideRegion(maze_grid, row_start, row_end, kWallCol + 1, col_end, engine);
+  }
 }
 
 void GenerateMazeRecursiveInternal(int row, int col, Grid& current_maze_data,
@@ -250,6 +342,65 @@ void GenerateMazeKruskal(Grid& maze, int /*start_row*/, int /*start_col*/,
   GenerateMazeKruskalInternal(maze, width, height);
 }
 
+void GenerateMazeRecursiveDivision(Grid& maze, int /*start_row*/,
+                                   int /*start_col*/, int width, int height) {
+  if (width < kMinDivisionSpan || height < kMinDivisionSpan) {
+    ResetWallsForDivision(maze, width, height);
+    return;
+  }
+  ResetWallsForDivision(maze, width, height);
+  std::random_device random_device;
+  std::mt19937 engine(random_device());
+  DivideRegion(maze, 0, height - 1, 0, width - 1, engine);
+}
+
+void GenerateMazeGrowingTree(Grid& maze, int start_row, int start_col, int width,
+                             int height) {
+  const GridSize kGridSize{.width = width, .height = height};
+  auto visited = CreateVisitedGrid(kGridSize);
+  std::vector<CellPosition> active_cells;
+  active_cells.push_back({start_row, start_col});
+  visited[start_row][start_col] = true;
+
+  std::random_device random_device;
+  std::mt19937 engine(random_device());
+
+  while (!active_cells.empty()) {
+    std::uniform_int_distribution<int> index_dist(
+        0, static_cast<int>(active_cells.size()) - 1);
+    const int kCellIndex = index_dist(engine);
+    const CellPosition kCell = active_cells[kCellIndex];
+
+    std::vector<Direction> neighbors;
+    neighbors.reserve(kAllDirections.size());
+    for (Direction dir : kAllDirections) {
+      const auto kInfo = kDirectionTable[DirectionIndex(dir)];
+      const int kNextRow = kCell.first + kInfo.dr;
+      const int kNextCol = kCell.second + kInfo.dc;
+      if (kNextRow >= 0 && kNextRow < height && kNextCol >= 0 &&
+          kNextCol < width && !visited[kNextRow][kNextCol]) {
+        neighbors.push_back(dir);
+      }
+    }
+
+    if (neighbors.empty()) {
+      active_cells[kCellIndex] = active_cells.back();
+      active_cells.pop_back();
+      continue;
+    }
+
+    std::uniform_int_distribution<int> dir_dist(
+        0, static_cast<int>(neighbors.size()) - 1);
+    const Direction kDir = neighbors[dir_dist(engine)];
+    const auto kInfo = kDirectionTable[DirectionIndex(kDir)];
+    const int kNextRow = kCell.first + kInfo.dr;
+    const int kNextCol = kCell.second + kInfo.dc;
+    Carve(maze, kCell.first, kCell.second, kDir);
+    visited[kNextRow][kNextCol] = true;
+    active_cells.push_back({kNextRow, kNextCol});
+  }
+}
+
 }  // namespace
 
 namespace MazeDomain {
@@ -259,6 +410,10 @@ MazeGeneratorFactory::MazeGeneratorFactory() {
   register_generator(MazeAlgorithmType::PRIMS, "Prims", GenerateMazePrims);
   register_generator(MazeAlgorithmType::KRUSKAL, "Kruskal",
                      GenerateMazeKruskal);
+  register_generator(MazeAlgorithmType::RECURSIVE_DIVISION,
+                     "Recursive Division", GenerateMazeRecursiveDivision);
+  register_generator(MazeAlgorithmType::GROWING_TREE, "Growing Tree",
+                     GenerateMazeGrowingTree);
 }
 
 auto MazeGeneratorFactory::instance() -> MazeGeneratorFactory& {
@@ -331,7 +486,8 @@ void generate_maze_structure(MazeGrid& maze_grid_to_populate, int start_r,
                              int start_c, int grid_width, int grid_height,
                              MazeAlgorithmType algorithm_type) {
   if (algorithm_type == MazeAlgorithmType::DFS ||
-      algorithm_type == MazeAlgorithmType::PRIMS) {
+      algorithm_type == MazeAlgorithmType::PRIMS ||
+      algorithm_type == MazeAlgorithmType::GROWING_TREE) {
     if (start_r < 0 || start_r >= grid_height || start_c < 0 ||
         start_c >= grid_width) {
       start_r = 0;

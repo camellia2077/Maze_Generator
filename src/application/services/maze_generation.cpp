@@ -8,12 +8,14 @@ void generate_maze_structure(MazeGrid& maze_grid_to_populate, int start_r,
                              int start_c, int grid_width, int grid_height,
                              MazeAlgorithmType algorithm_type) {
   if (algorithm_type == MazeAlgorithmType::DFS ||
-      algorithm_type == MazeAlgorithmType::PRIMS) {
+      algorithm_type == MazeAlgorithmType::PRIMS ||
+      algorithm_type == MazeAlgorithmType::GROWING_TREE) {
     if (start_r < 0 || start_r >= grid_height || start_c < 0 ||
         start_c >= grid_width) {
       std::cerr << "Warning: Maze generation start coordinates (" << start_r
                 << "," << start_c << ") out of bounds for grid (" << grid_height
-                << "x" << grid_width << ") for DFS/Prims. Defaulting to (0,0)."
+                << "x" << grid_width
+                << ") for DFS/Prims/Growing Tree. Defaulting to (0,0)."
                 << std::endl;
       start_r = 0;
       start_c = 0;

@@ -3,7 +3,9 @@
 #include <utility>
 
 #include "application/services/maze_generation.h"
+#include "application/services/maze_solver.h"
 #include "cli/commands/generation_algorithms_command.h"
+#include "cli/commands/search_algorithms_command.h"
 #include "common/version.hpp"
 
 namespace Cli {
@@ -24,6 +26,10 @@ auto IsOutputToken(const std::string& token) -> bool {
 
 auto IsGenerationAlgorithmsToken(const std::string& token) -> bool {
   return token == "--generation-algorithms";
+}
+
+auto IsSearchAlgorithmsToken(const std::string& token) -> bool {
+  return token == "--search-algorithms";
 }
 
 struct OptionOutcome {
@@ -90,6 +96,25 @@ auto ConsumeOptionValue(const std::string& token,
     return outcome;
   }
 
+  if (IsSearchAlgorithmsToken(token)) {
+    outcome.consumed = true;
+    if (index + 1 >= argc) {
+      ctx.err << "Missing value for " << token << "\n";
+      outcome.handled = true;
+      outcome.exit_code = 1;
+      return outcome;
+    }
+    const std::string kValue = argv[++index];
+    const int kCode = ApplySearchAlgorithms({kValue}, ctx);
+    if (kCode != 0) {
+      PrintSupportedSearchAlgorithms(ctx.err);
+      outcome.handled = true;
+      outcome.exit_code = kCode;
+      return outcome;
+    }
+    return outcome;
+  }
+
   return outcome;
 }
 
@@ -127,6 +152,9 @@ void CliApp::print_help(std::ostream& out) const {
   out << "  --generation-algorithms <list>\n";
   out << "                      Override GenerationAlgorithms "
          "(comma-separated)\n";
+  out << "  --search-algorithms <list>\n";
+  out << "                      Override SearchAlgorithms "
+         "(comma-separated)\n";
   out << "  -o, --output <dir>   Set output directory\n";
   out << "  -h, --help           Show this help\n";
 
@@ -135,6 +163,16 @@ void CliApp::print_help(std::ostream& out) const {
   for (size_t i = 0; i < kSupported.size(); ++i) {
     out << kSupported[i];
     if (i < kSupported.size() - 1) {
+      out << ", ";
+    }
+  }
+  out << "\n";
+
+  const auto kSupportedSearch = MazeSolver::SupportedAlgorithms();
+  out << "Supported SearchAlgorithms: ";
+  for (size_t i = 0; i < kSupportedSearch.size(); ++i) {
+    out << kSupportedSearch[i];
+    if (i < kSupportedSearch.size() - 1) {
       out << ", ";
     }
   }

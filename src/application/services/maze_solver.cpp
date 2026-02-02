@@ -24,6 +24,10 @@ auto TryParseAlgorithm(std::string_view name, SolverAlgorithmType& out_type)
   return MazeSolverDomain::TryParseAlgorithm(name, out_type);
 }
 
+auto SupportedAlgorithms() -> std::vector<std::string> {
+  return MazeSolverDomain::supported_algorithms();
+}
+
 auto Solve(const MazeDomain::MazeGrid& maze_data,
            SolverAlgorithmType algorithm_type, const Config::AppConfig& config)
     -> SearchResult {

@@ -9,6 +9,7 @@
 #include "application/services/maze_generation.h"
 #include "application/services/maze_solver.h"
 #include "cli/commands/generation_algorithms_command.h"
+#include "cli/commands/search_algorithms_command.h"
 #include "cli/commands/version_command.h"
 #include "cli/framework/cli_app.h"
 #include "infrastructure/config/config_loader.h"
@@ -40,6 +41,17 @@ void PrintAlgorithmList(
   std::cout << std::endl;
 }
 
+void PrintSearchAlgorithmList(
+    const std::vector<Config::SearchAlgorithmInfo>& algorithms) {
+  for (size_t index = 0; index < algorithms.size(); ++index) {
+    std::cout << algorithms[index].name;
+    if (index + 1 < algorithms.size()) {
+      std::cout << ", ";
+    }
+  }
+  std::cout << std::endl;
+}
+
 void PrintConfigSummary(const Config::AppConfig& config,
                         const std::filesystem::path& config_path) {
   std::cout << "Configuration successfully loaded from "
@@ -53,6 +65,8 @@ void PrintConfigSummary(const Config::AppConfig& config,
             << config.maze.end_node.second << ")" << std::endl;
   std::cout << "Selected Generation Algorithms: ";
   PrintAlgorithmList(config.maze.generation_algorithms);
+  std::cout << "Selected Search Algorithms: ";
+  PrintSearchAlgorithmList(config.maze.search_algorithms);
 }
 
 void PrintLoadWarnings(const std::vector<std::string>& warnings) {
@@ -84,10 +98,11 @@ void MaybeLogAdjustedStart(const Config::MazeConfig& maze,
   }
 
   if (algo_info.type == MazeGeneration::MazeAlgorithmType::DFS ||
-      algo_info.type == MazeGeneration::MazeAlgorithmType::PRIMS) {
+      algo_info.type == MazeGeneration::MazeAlgorithmType::PRIMS ||
+      algo_info.type == MazeGeneration::MazeAlgorithmType::GROWING_TREE) {
     std::cout << "Adjusted maze generation start point to (" << start_row
               << "," << start_col
-              << ") due to out-of-bounds config START_NODE for DFS/Prims."
+              << ") due to out-of-bounds config START_NODE for DFS/Prims/Growing Tree."
               << std::endl;
   }
 }
@@ -158,10 +173,10 @@ void RunGenerationForAlgorithm(const Config::AppConfig& config,
 
   std::cout << "Maze generated." << std::endl;
 
-  RunSolverAndRender(maze_grid, algo_info, config,
-                     MazeSolver::SolverAlgorithmType::BFS, "BFS");
-  RunSolverAndRender(maze_grid, algo_info, config,
-                     MazeSolver::SolverAlgorithmType::DFS, "DFS");
+  for (const auto& solver_info : config.maze.search_algorithms) {
+    RunSolverAndRender(maze_grid, algo_info, config, solver_info.type,
+                       solver_info.name.c_str());
+  }
 }
 
 void RunGenerationPipeline(const Config::AppConfig& config) {
@@ -215,15 +230,24 @@ auto main(int argc, char** argv) -> int {
       ConfigLoader::load_config(kConfigPath.string());
   Config::AppConfig config = std::move(load_result.config);
   if (!load_result.ok) {
-    std::cerr << load_result.error << "\nUsing default values.\n";
+    std::cerr << load_result.error << "\n";
   } else {
     PrintConfigSummary(config, kConfigPath);
   }
   PrintLoadWarnings(load_result.warnings);
 
+  if (config.maze.search_algorithms.empty()) {
+    return 1;
+  }
+
+  if (!load_result.ok) {
+    std::cerr << "Using default values.\n";
+  }
+
   Cli::CliApp cli;
   Cli::RegisterVersionCommand(cli);
   Cli::RegisterGenerationAlgorithmsCommand(cli);
+  Cli::RegisterSearchAlgorithmsCommand(cli);
   RegisterBuiltInCommands(cli);
 
   int cli_code = 0;

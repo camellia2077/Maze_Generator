@@ -1,11 +1,13 @@
 # Maze Configuration File
 
 [MazeConfig]
-MazeWidth = 12
-MazeHeight = 12
-UnitPixels = 25
-# #e.g., DFS,PRIMS,KRUSKAL
-GenerationAlgorithms = [ "PRIMS", "KRUSKAL" ]
+MazeWidth = 8
+MazeHeight = 8
+UnitPixels = 20
+# #e.g., DFS,PRIMS,KRUSKAL,"Recursive Division","Growing Tree"
+GenerationAlgorithms = [ "DFS","PRIMS", "KRUSKAL" ,"Recursive Division","Growing Tree"]
+# #e.g., BFS,DFS,ASTAR,Dijkstra,"Greedy Best-First"
+SearchAlgorithms = [ "BFS", "DFS" ]
 
 # You can also add StartNodeX, StartNodeY, EndNodeX, EndNodeY if you want them to be configurable
 # Example:

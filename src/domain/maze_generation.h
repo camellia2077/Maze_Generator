@@ -13,9 +13,11 @@ namespace MazeDomain {
 
 // Enum to specify the maze generation algorithm
 enum class MazeAlgorithmType {
-  DFS,     // Recursive Backtracker (Randomized DFS)
-  PRIMS,   // Randomized Prim's Algorithm
-  KRUSKAL  // Randomized Kruskal's Algorithm
+  DFS,                 // Recursive Backtracker (Randomized DFS)
+  PRIMS,               // Randomized Prim's Algorithm
+  KRUSKAL,             // Randomized Kruskal's Algorithm
+  RECURSIVE_DIVISION,  // Recursive Division
+  GROWING_TREE         // Growing Tree
 };
 
 enum class Direction { Up = 0, Right = 1, Down = 2, Left = 3 };

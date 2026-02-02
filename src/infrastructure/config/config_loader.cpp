@@ -122,6 +122,28 @@ auto load_config(const std::string& filename) -> LoadResult {
              MazeGeneration::MazeAlgorithmType::DFS)});
   }
 
+  result.config.maze.search_algorithms.clear();
+  if (auto* search_algos =
+          config["MazeConfig"]["SearchAlgorithms"].as_array()) {
+    for (const auto& elem : *search_algos) {
+      if (auto algo_name = elem.value<std::string>()) {
+        MazeSolverDomain::SolverAlgorithmType type;
+        if (MazeSolverDomain::TryParseAlgorithm(*algo_name, type)) {
+          result.config.maze.search_algorithms.push_back(
+              {type, MazeSolverDomain::AlgorithmName(type)});
+        } else {
+          result.warnings.push_back("Warning: Unknown search algorithm '" +
+                                    *algo_name + "' in config. Ignoring.");
+        }
+      }
+    }
+  }
+
+  if (result.config.maze.search_algorithms.empty()) {
+    result.ok = false;
+    result.error = "SearchAlgorithms 不能为空 (cannot be empty).";
+  }
+
   auto load_color = [&](const char* key, unsigned char* color_arr) -> void {
     if (auto color_str = config["ColorConfig"][key].value<std::string>()) {
       ParseHexColorString(*color_str, color_arr, result.warnings);

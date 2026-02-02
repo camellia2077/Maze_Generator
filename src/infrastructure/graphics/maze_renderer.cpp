@@ -29,16 +29,20 @@ constexpr int kWallTop = 0;
 constexpr int kWallRight = 1;
 constexpr int kWallBottom = 2;
 
-auto SolverFolderPrefix(SolverAlgorithmType algorithm_type) -> std::string {
+auto SolverFolderName(SolverAlgorithmType algorithm_type) -> std::string {
   switch (algorithm_type) {
     case SolverAlgorithmType::BFS:
-      return "bfs_frames_generated_by_";
+      return "bfs";
     case SolverAlgorithmType::DFS:
-      return "dfs_frames_generated_by_";
+      return "dfs";
     case SolverAlgorithmType::ASTAR:
-      return "astar_frames_generated_by_";
+      return "astar";
+    case SolverAlgorithmType::DIJKSTRA:
+      return "dijkstra";
+    case SolverAlgorithmType::GREEDY_BEST_FIRST:
+      return "greedy_best_first";
   }
-  return "solver_frames_generated_by_";
+  return "solver";
 }
 
 struct ImageSize {
@@ -384,9 +388,12 @@ auto RenderSearchResult(const SearchResult& result,
   }
 
   fs::path base_dir = config.output_dir.empty() ? "." : config.output_dir;
-  const std::string kFolderName = SolverFolderPrefix(algorithm_type) +
-                                  std::string(generation_algorithm_name);
-  fs::path folder_path = base_dir / kFolderName;
+  std::string generation_folder = std::string(generation_algorithm_name);
+  if (generation_folder.empty()) {
+    generation_folder = "generation";
+  }
+  const std::string kSolverFolder = SolverFolderName(algorithm_type);
+  fs::path folder_path = base_dir / kSolverFolder / generation_folder;
   std::error_code fs_error;
   fs::create_directories(folder_path, fs_error);
   if (fs_error) {

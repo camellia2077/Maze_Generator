@@ -6,11 +6,17 @@
 #include <vector>
 
 #include "application/services/maze_generation.h"
+#include "domain/maze_solver.h"
 
 namespace Config {
 
 struct AlgorithmInfo {
   MazeGeneration::MazeAlgorithmType type;
+  std::string name;
+};
+
+struct SearchAlgorithmInfo {
+  MazeSolverDomain::SolverAlgorithmType type;
   std::string name;
 };
 
@@ -21,6 +27,7 @@ struct MazeConfig {
   std::pair<int, int> start_node = {0, 0};
   std::pair<int, int> end_node = {0, 0};
   std::vector<AlgorithmInfo> generation_algorithms;
+  std::vector<SearchAlgorithmInfo> search_algorithms;
 };
 
 struct ColorConfig {

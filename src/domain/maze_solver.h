@@ -14,7 +14,7 @@ namespace MazeSolverDomain {
 
 using GridPosition = std::pair<int, int>;
 
-enum class SolverAlgorithmType { BFS, DFS, ASTAR };
+enum class SolverAlgorithmType { BFS, DFS, ASTAR, DIJKSTRA, GREEDY_BEST_FIRST };
 
 enum class SolverCellState {
   NONE,
@@ -52,6 +52,7 @@ class MazeSolverFactory {
   Solver GetSolver(SolverAlgorithmType type) const;
   std::string NameFor(SolverAlgorithmType type) const;
   bool TryParse(std::string_view name, SolverAlgorithmType& out_type) const;
+  std::vector<std::string> Names() const;
 
  private:
   MazeSolverFactory();
@@ -70,6 +71,7 @@ SearchResult Solve(const MazeDomain::MazeGrid& maze_grid,
                    SolverAlgorithmType algorithm_type);
 std::string AlgorithmName(SolverAlgorithmType algorithm_type);
 bool TryParseAlgorithm(std::string_view name, SolverAlgorithmType& out_type);
+std::vector<std::string> supported_algorithms();
 
 }  // namespace MazeSolverDomain
 

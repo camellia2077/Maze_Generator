@@ -15,6 +15,7 @@ using SearchResult = MazeSolverDomain::SearchResult;
 
 std::string AlgorithmName(SolverAlgorithmType algorithm_type);
 bool TryParseAlgorithm(std::string_view name, SolverAlgorithmType& out_type);
+std::vector<std::string> SupportedAlgorithms();
 
 SearchResult Solve(const MazeDomain::MazeGrid& maze_data,
                    SolverAlgorithmType algorithm_type,

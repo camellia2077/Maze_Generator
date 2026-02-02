@@ -3,11 +3,18 @@ add_executable(maze_generator_app
     src/main.cpp
     src/cli/framework/cli_app.cpp
     src/cli/commands/generation_algorithms_command.cpp
+    src/cli/commands/search_algorithms_command.cpp
     src/cli/commands/version_command.cpp
     src/common/pch.cpp
     src/infrastructure/config/config_loader.cpp
     src/domain/maze_generation.cpp
+    src/domain/maze_solver_common.cpp
     src/domain/maze_solver.cpp
+    src/domain/maze_solver_bfs.cpp
+    src/domain/maze_solver_dfs.cpp
+    src/domain/maze_solver_astar.cpp
+    src/domain/maze_solver_dijkstra.cpp
+    src/domain/maze_solver_greedy.cpp
     src/application/services/maze_generation.cpp
     src/application/services/maze_solver.cpp
     src/infrastructure/graphics/maze_renderer.cpp
